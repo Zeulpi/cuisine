@@ -1,0 +1,221 @@
+{% extends 'base.html.twig' %}
+    
+{% block title %}Update Recipe{% endblock %}
+    
+{% block stylesheets %}
+    <pre><link rel="stylesheet" href="{{ asset('styles/ingredient_popup.css') }}"></pre>
+{% endblock %}
+
+{% block body %}
+<style>
+    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
+    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
+</style>
+
+<div class="example-wrapper">
+    <h1>Update une recette</h1>
+
+    {{ form_start(form) }}
+        <div>
+            {{ form_row(form.recipeName) }}
+        </div>
+
+        <div>
+            <h3>Ingredients</h3>
+            <button id="add-ingredient-button" type="button">Add Ingredient</button>
+            <!-- Pop-up pour choisir l'ingrédient -->
+            <div id="ingredient-popup" class="popup" style="display: none;">
+                <div class="popup-content">
+                    <h2>Choose an Ingredient</h2>
+                    <div id="ingredients-list" class="ingredients-list">
+                        {% for ingredient in ingredients %}
+                            <div class="ingredient-card" data-id="{{ ingredient.id }}" data-image="{{ ingredient.image }}" data-name="{{ ingredient.ingredientName }}">
+                                <img src="{{ asset('images/ingredients/' ~ ingredient.image) }}" alt="{{ ingredient.ingredientName }}" style="width: 100px;">
+                                <p>{{ ingredient.ingredientName }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button id="close-popup" type="button">Close</button>
+                </div>
+            </div>
+            <!-- Conteneur des ingrédients ajoutés -->
+            <div id="ingredients-container">
+                <input type="hidden" id="selected-ingredients" name="selected-ingredients" value="{{ existingIngredients|raw }}">
+            </div>
+        </div>
+
+        <h3>Steps</h3>
+        <div id="steps" data-prototype="{{ form_widget(form.recipeSteps.vars.prototype)|e('html_attr') }}">
+            {% for step in form.recipeSteps %}
+                <div class="step-item">
+                    {{ form_widget(step) }}
+                    <button type="button" class="remove-step">Remove</button>
+                </div>
+            {% endfor %}
+        </div>
+        <div>
+            <div>
+                {% if recipe.recipeImg %}
+                    <img src="{{ asset('images/recipes/' ~ recipe.recipeImg) }}" style="width:100px">
+                {% endif %}
+                {{ form_row(form.image) }}
+            </div>
+            
+        </div>
+        <button type="submit">Save Recipe</button>
+    {{ form_end(form) }}
+
+    <a href="{{ path('app_recipe') }}">back to list</a>
+</div>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', () => {
+    const addIngredientButton = document.getElementById('add-ingredient-button');
+    const ingredientPopup = document.getElementById('ingredient-popup');
+    const closePopupButton = document.getElementById('close-popup');
+    const stepsContainer = document.getElementById('steps');
+    const addStepButton = document.createElement('button');
+    const ingredientsContainer = document.getElementById('ingredients-container');
+    const selectedIngredientsField = document.getElementById('selected-ingredients');
+    const existingIngredients = JSON.parse(selectedIngredientsField.value);
+    const ingredients = {{ ingredients|json_encode|raw }};
+    addStepButton.textContent = 'Add Step';
+    addStepButton.type = 'button';
+    stepsContainer.append(addStepButton);
+
+    let stepIndex = stepsContainer.querySelectorAll('.step-item').length;
+    
+    console.log("ingredients array:", ingredients);
+
+    // Fonction pour masquer le champ 'stepSimult' pour l'étape 1
+    function hideStepSimultForFirstStep() {
+        const stepItems = stepsContainer.querySelectorAll('.step-item');
+        stepItems.forEach((stepItem, index) => {
+            const stepSimult = stepItem.querySelector('input[name*="[stepSimult]"]');
+            if (index === 0 && stepSimult) {
+                stepSimult.closest('div').style.display = 'none'; // Masque le champ pour l'étape 1
+            } else if (stepSimult) {
+                stepSimult.closest('div').style.display = ''; // Affiche le champ pour les autres étapes
+            }
+        });
+    }
+
+    // Fonction pour ajouter un ingrédient au conteneur
+    function addIngredientToContainer(ingredientId, ingredientName, ingredientImage) {
+        const ingredientDiv = document.createElement('div');
+        ingredientDiv.classList.add('ingredient-item');
+        ingredientDiv.setAttribute('data-id', ingredientId);
+        ingredientDiv.innerHTML = `
+            <img src="/images/ingredients/${ingredientImage}" alt="${ingredientName}" style="width: 50px;">
+            <span>${ingredientName}</span>
+            <button type="button" class="remove-ingredient">Remove</button>
+        `;
+        ingredientsContainer.appendChild(ingredientDiv);
+    }
+    // Désactiver les cartes des ingrédients déjà sélectionnés
+    function disableSelectedIngredients() {
+        const ingredientCards = document.querySelectorAll('.ingredient-card');
+        ingredientCards.forEach(card => {
+            const ingredientId = parseInt(card.getAttribute('data-id'), 10);
+            if (existingIngredients.includes(ingredientId)) {
+                card.classList.add('disabled');
+                card.style.pointerEvents = 'none';
+                card.style.opacity = '0.5';
+            } else {
+                card.classList.remove('disabled');
+                card.style.pointerEvents = 'auto';
+                card.style.opacity = '1';
+            }
+        });
+    }
+    // Charger les ingrédients existants dans le conteneur
+    existingIngredients.forEach(ingredientId => {
+        const ingredient = ingredients.find(i => i.id === ingredientId);
+        if (ingredient) {
+            addIngredientToContainer(ingredient.id, ingredient.ingredientName, ingredient.image);
+        }
+    });
+    
+    // Appliquer les désactivations initiales
+    disableSelectedIngredients();
+
+    // Ouvrir le pop-up
+    addIngredientButton.addEventListener('click', () => {
+        ingredientPopup.style.display = 'flex';
+    });
+
+    // Fermer le pop-up
+    closePopupButton.addEventListener('click', () => {
+        ingredientPopup.style.display = 'none';
+    });
+
+    // Sélectionner un ingrédient
+    document.getElementById('ingredients-list').addEventListener('click', (e) => {
+        if (e.target && e.target.closest('.ingredient-card')) {
+            const selectedCard = e.target.closest('.ingredient-card');
+            const ingredientId = parseInt(selectedCard.getAttribute('data-id'), 10);
+            const ingredientImage = selectedCard.getAttribute('data-image');
+            const ingredientName = selectedCard.getAttribute('data-name');
+
+            if (!existingIngredients.includes(ingredientId)) {
+                addIngredientToContainer(ingredientId, ingredientName, ingredientImage);
+                existingIngredients.push(ingredientId);
+                selectedIngredientsField.value = JSON.stringify(existingIngredients);
+                disableSelectedIngredients();
+            }
+
+            ingredientPopup.style.display = 'none';
+        }
+    });
+    // Supprimer un ingrédient
+    ingredientsContainer.addEventListener('click', (e) => {
+        if (e.target && e.target.classList.contains('remove-ingredient')) {
+            const ingredientDiv = e.target.closest('.ingredient-item');
+            const ingredientId = parseInt(ingredientDiv.getAttribute('data-id'), 10);
+
+            // Mettre à jour la liste des ingrédients sélectionnés
+            const index = existingIngredients.indexOf(ingredientId);
+            if (index > -1) {
+                existingIngredients.splice(index, 1);
+                selectedIngredientsField.value = JSON.stringify(existingIngredients);
+            }
+
+            // Supprimer l'ingrédient du conteneur
+            ingredientDiv.remove();
+            disableSelectedIngredients();
+        }
+    });
+
+    // Appeler la fonction au chargement de la page pour masquer 'stepSimult' pour la première étape
+    hideStepSimultForFirstStep();
+
+    addStepButton.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        const prototype = stepsContainer.dataset.prototype;
+        const newForm = prototype.replace(/__name__/g, stepIndex);
+
+        const newStepElement = document.createElement('div');
+        newStepElement.classList.add('step-item');
+        newStepElement.innerHTML = newForm;
+        newStepElement.innerHTML += '<button type="button" class="remove-step">Remove</button>';
+
+        stepsContainer.insertBefore(newStepElement, addStepButton);
+
+        stepIndex++;
+        // Re-appliquer la logique pour masquer 'stepSimult' pour la première étape
+        hideStepSimultForFirstStep();
+    });
+
+    // Supprimer une étape
+    stepsContainer.addEventListener('click', (e) => {
+        if (e.target && e.target.classList.contains('remove-step')) {
+            e.target.closest('.step-item').remove();
+
+            // Après suppression, réappliquer la logique pour vérifier les étapes restantes
+            hideStepSimultForFirstStep();
+        }
+    });
+});
+</script>
+{% endblock %}

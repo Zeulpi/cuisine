@@ -18,7 +18,7 @@ class Ingredient
     #[ORM\Column(length: 255)]
     private ?string $ingredientName = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable: true)]
     private ?string $ingredientUnit = null;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -31,15 +31,15 @@ class Ingredient
     private Collection $ingredientRecipe;
 
     /**
-     * @var Collection<int, step>
+     * @var Collection<int, StepOperation>
      */
-    #[ORM\ManyToMany(targetEntity: step::class, inversedBy: 'stepIngredient')]
-    private Collection $ingredientStep;
+    #[ORM\OneToMany(targetEntity: StepOperation::class, mappedBy: 'ingredient', orphanRemoval: true, cascade: ['persist', 'remove'])]
+    private Collection $stepOperations;
 
     public function __construct()
     {
         $this->ingredientRecipe = new ArrayCollection();
-        $this->ingredientStep = new ArrayCollection();
+        $this->stepOperations = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -109,28 +109,34 @@ class Ingredient
 
         return $this;
     }
-
+    
     /**
-     * @return Collection<int, step>
+     * @return Collection<int, StepOperation>
      */
-    public function getIngredientStep(): Collection
+    public function getStepOperations(): Collection
     {
-        return $this->ingredientStep;
+        return $this->stepOperations;
     }
 
-    public function addIngredientStep(step $ingredientStep): static
+    public function addStepOperation(StepOperation $stepOperation): self
     {
-        if (!$this->ingredientStep->contains($ingredientStep)) {
-            $this->ingredientStep->add($ingredientStep);
+        if (!$this->stepOperations->contains($stepOperation)) {
+            $this->stepOperations->add($stepOperation);
+            $stepOperation->setIngredient($this);
         }
 
         return $this;
     }
 
-    public function removeIngredientStep(step $ingredientStep): static
+    public function removeStepOperation(StepOperation $stepOperation): self
     {
-        $this->ingredientStep->removeElement($ingredientStep);
+        if ($this->stepOperations->removeElement($stepOperation)) {
+            if ($stepOperation->getIngredient() === $this) {
+                $stepOperation->setIngredient(null);
+            }
+        }
 
         return $this;
     }
+
 }

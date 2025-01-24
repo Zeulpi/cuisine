@@ -1,0 +1,17 @@
+.operation {
+    color: #007bff;  /* Bleu pour les opérations */
+    font-weight: bold;
+}
+
+.ingredient {
+    color: #28a745;  /* Vert pour les ingrédients */
+    font-style: italic;
+}
+
+.step-description {
+    color: #6c757d;  /* Gris pour les descriptions d'étapes */
+    background-color: aliceblue;
+    border: rounded 1px #007bff;
+    border-radius: 5px;
+
+}

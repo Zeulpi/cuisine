@@ -39,6 +39,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\ManyToMany(targetEntity: Recipe::class, mappedBy: 'recipeNote')]
     private Collection $UserNote;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $userImg = null;
+
     public function __construct()
     {
         $this->UserNote = new ArrayCollection();
@@ -141,6 +144,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         if ($this->UserNote->removeElement($userNote)) {
             $userNote->removeRecipeNote($this);
         }
+
+        return $this;
+    }
+
+    public function getUserImg(): ?string
+    {
+        return $this->userImg;
+    }
+
+    public function setUserImg(?string $userImg): static
+    {
+        $this->userImg = $userImg;
 
         return $this;
     }

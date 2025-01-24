@@ -1,0 +1,442 @@
+{% extends 'base.html.twig' %}
+    
+{% block title %}Create Recipe{% endblock %}
+    
+{% block stylesheets %}
+    <pre><link rel="stylesheet" href="{{ asset('styles/ingredient_popup.css') }}"></pre>
+    <pre><link rel="stylesheet" href="{{ asset('styles/recipe_create.css') }}"></pre>
+{% endblock %}
+
+{% block body %}
+<style>
+    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
+    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
+</style>
+
+<div class="example-wrapper">
+    <h1>Créer une recette</h1>
+
+    {{ form_start(form) }}
+        <div>
+            {{ form_row(form.recipeName) }}
+        </div>
+        
+        <div>
+            <h3>Ingredients</h3>
+            <button id="add-ingredient-button" type="button">Add Ingredient</button>
+            <!-- Pop-up pour choisir l'ingrédient -->
+            <div id="ingredient-popup" class="popup" style="display: none;">
+                <div class="popup-content">
+                    <h2>Choose an Ingredient</h2>
+                    <div id="ingredients-list" class="ingredients-list">
+                        {% for ingredient in ingredients %}
+                            <div class="ingredient-card" data-id="{{ ingredient.id }}" data-image="{{ ingredient.image }}" data-name="{{ ingredient.ingredientName }}">
+                                <img src="{{ asset('images/ingredients/' ~ ingredient.image) }}" alt="{{ ingredient.ingredientName }}" style="width: 100px;">
+                                <p>{{ ingredient.ingredientName }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button id="close-popup" type="button">Close</button>
+                </div>
+            </div>
+            <!-- Conteneur des ingrédients ajoutés -->
+            <div id="ingredients-container">
+                <input type="hidden" id="selected-ingredients" name="selected-ingredients" value="[]">
+            </div>
+        </div>
+        
+        <h3>Steps</h3>
+        <div>
+            <div id="steps" data-prototype="{{ form_widget(form.recipeSteps.vars.prototype)|e('html_attr') }}">
+                {% for step in form.recipeSteps %}
+                    <div class="step-item">
+                        <!-- Div contenteditable pour l'utilisateur -->
+                        <div class="step-description" contenteditable="true">
+                            {{ step.stepText.vars.value|default('') }}
+                        </div>
+
+                        <!-- Champ pour le temps de l'étape -->
+                        <div class="step-time">
+                            {{ form_widget(step.stepTime) }} <!-- Champ stepTime -->
+                        </div>
+
+                        <!-- Champ pour l'unité de temps -->
+                        <div class="step-time-unit">
+                            {{ form_widget(step.stepTimeUnit) }} <!-- Champ stepTimeUnit -->
+                        </div>
+
+                        <!-- Champ pour simultanéité -->
+                        <div class="step-simult">
+                            {{ form_widget(step.stepSimult) }} <!-- Champ stepSimult -->
+                        </div>
+
+                        <button type="button" class="remove-step">Remove</button>
+
+                        <!-- Conteneur pour les opérations de cette étape -->
+                        <div class="operations-container">
+                            <h4>Operations sur les Ingrédients</h4>
+                            <button class="add-operation-button" type="button">Ajouter une opération</button>
+                            <!-- Pop-up pour choisir une opération -->
+                            <div class="operation-popup popup" style="display: none;">
+                                <div class="popup-content">
+                                    <h5>Ajouter une opération</h5>
+
+                                    <!-- Liste des opérations -->
+                                    <select class="operation-select">
+                                        <option value="">Choisissez une opération</option>
+                                        {% for operation in operations %}
+                                            <option value="{{ operation.id }}">{{ operation.name }}</option>
+                                        {% endfor %}
+                                    </select>
+
+                                    <!-- Liste des ingrédients -->
+                                    <select class="ingredient-select">
+                                        <option value="">Choisissez un ingrédient</option>
+                                        {% for ingredient in ingredients %}
+                                            <option value="{{ ingredient.id }}">{{ ingredient.ingredientName }}</option>
+                                        {% endfor %}
+                                    </select>
+
+                                    <!-- Description du résultat -->
+                                    <input type="text" class="result-description" placeholder="(ex : Eplucher 5 pommes de terre)">
+
+                                    <button class="save-operation-button" type="button">Ajouter</button>
+                                    <button class="close-operation-popup" type="button">Fermer</button>
+                                </div>
+                            </div>
+
+                            <!-- Conteneur des opérations ajoutées -->
+                            <div class="added-operations">
+                                <input type="hidden" class="selected-operations" name="selected-operations" value="[]">
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+                <input type="hidden" name="all-selected-operations" id="all-selected-operations" value="[]">
+            </div>
+        </div>
+        <h3>Image de la recette</h3>
+        <div>
+            {{ form_widget(form.image) }}
+        </div>
+        
+        <button type="submit">Save Recipe</button>
+    {{ form_end(form) }}
+
+    <a href="{{ path('app_recipe') }}">back to list</a>
+</div>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', () => {
+    const addIngredientButton = document.getElementById('add-ingredient-button');
+    const ingredientPopup = document.getElementById('ingredient-popup');
+    const closePopupButton = document.getElementById('close-popup');
+    const ingredientsContainer = document.getElementById('ingredients-container');
+    const stepsContainer = document.getElementById('steps');
+    const addStepButton = document.createElement('button');
+    const addOperationButton = document.getElementById('add-operation-button');
+    const operationPopup = document.getElementById('operation-popup');
+    const closeOperationPopupButton = document.getElementById('close-operation-popup');
+    const saveOperationButton = document.getElementById('save-operation-button');
+    const operationsContainer = document.getElementById('operations-container');
+    const selectedOperationsField = document.getElementById('selected-operations');
+
+    addStepButton.textContent = 'Add Step';
+    addStepButton.type = 'button';
+    stepsContainer.append(addStepButton);
+
+    const ingredients = {{ ingredients|json_encode|raw }}; // Les ingrédients passés depuis Symfony
+    const operations = {{ operations|json_encode|raw }};
+
+    // Récupérer les ingrédients déjà ajoutés à la recette
+    const selectedIngredientsField = document.getElementById('selected-ingredients');
+    let selectedIngredients = JSON.parse(selectedIngredientsField.value || '[]');
+    let stepIndex = stepsContainer.querySelectorAll('.step-item').length;
+    console.log(stepIndex);
+    
+    // Mettre à jour les options dans la liste des ingrédients du popup opérations
+    function updateIngredientOptions(popup) {
+        const ingredientSelect = popup.querySelector('.ingredient-select');
+        ingredientSelect.innerHTML = '<option value="">Choisissez un ingrédient</option>'; // Réinitialiser
+
+        selectedIngredients.forEach(selectedIngredientId => {
+            const ingredient = ingredients.find(ing => ing.id === parseInt(selectedIngredientId)); // On convertit `selectedIngredientId` en nombre
+            if (ingredient) {
+                ingredientSelect.innerHTML += `<option value="${ingredient.id}">${ingredient.ingredientName}</option>`;
+            }
+        });
+    }
+
+    // Fonction pour synchroniser le contenu de "step-description" avec le champ caché
+    function syncStepDescription(stepItem) {
+        const descriptionDiv = stepItem.querySelector('.step-description');
+        const hiddenField = stepItem.querySelector('input[name*="[stepText]"]');
+        if (descriptionDiv && hiddenField) {
+            hiddenField.value = descriptionDiv.innerHTML;
+        }
+    }
+
+    // Fonction pour masquer le champ 'stepSimult' pour l'étape 1
+    function hideStepSimultForFirstStep() {
+        const stepItems = stepsContainer.querySelectorAll('.step-item');
+        stepItems.forEach((stepItem, index) => {
+            const stepSimult = stepItem.querySelector('input[name*="[stepSimult]"]');
+            if (index === 0 && stepSimult) {
+                stepSimult.closest('div').style.display = 'none'; // Masque le champ pour l'étape 1
+            } else if (stepSimult) {
+                stepSimult.closest('div').style.display = ''; // Affiche le champ pour les autres étapes
+            }
+        });
+    }
+
+    // Ouvrir le pop-up Ingredients
+    addIngredientButton.addEventListener('click', () => {
+        ingredientPopup.style.display = 'flex';
+        disableSelectedIngredients(); // Désactiver les ingrédients déjà ajoutés
+    });
+
+    // Fermer le pop-up Ingredients
+    closePopupButton.addEventListener('click', () => {
+        ingredientPopup.style.display = 'none';
+    });
+
+    // Désactiver les ingrédients déjà ajoutés
+    function disableSelectedIngredients() {
+        // Désactiver les ingrédients déjà présents
+        const ingredientCards = document.querySelectorAll('.ingredient-card');
+        ingredientCards.forEach(card => {
+            const ingredientId = card.getAttribute('data-id');
+            if (selectedIngredients.includes(ingredientId)) {
+                card.classList.add('disabled'); // Ajout d'une classe 'disabled'
+                const button = card.querySelector('button'); // Trouver le bouton dans la carte
+                if (button) {
+                    button.disabled = true; // Désactiver le bouton si trouvé
+                }
+            }
+            else {
+                card.classList.remove('disabled'); // Retirer la classe 'disabled'
+                const button = card.querySelector('button'); // Trouver le bouton dans la carte
+                if (button) {
+                    button.disabled = false; // Activer le bouton si trouvé
+                }
+            }
+        });
+    }
+
+    // Sélectionner un ingrédient
+    document.getElementById('ingredients-list').addEventListener('click', (e) => {
+        if (e.target && e.target.closest('.ingredient-card')) {
+            const selectedCard = e.target.closest('.ingredient-card');
+            const ingredientId = selectedCard.getAttribute('data-id');
+            const ingredientImage = selectedCard.getAttribute('data-image');
+            const ingredientName = selectedCard.getAttribute('data-name');
+
+            // Ajouter l'ingrédient sélectionné à la recette
+            const ingredientDiv = document.createElement('div');
+            ingredientDiv.classList.add('ingredient-item');
+            ingredientDiv.setAttribute('data-id', ingredientId); // ID de l'ingrédient
+
+            ingredientDiv.innerHTML = `
+                <img src="/images/ingredients/${ingredientImage}" alt="${ingredientName}" style="width: 50px;">
+                <span>${ingredientName}</span>
+                <button type="button" class="remove-ingredient">Remove</button>
+            `;
+            ingredientsContainer.appendChild(ingredientDiv);
+
+            // Ajouter l'ID de l'ingrédient au champ caché
+            selectedIngredients.push(ingredientId);  // Ajouter l'ID de l'ingrédient
+            selectedIngredientsField.value = JSON.stringify(selectedIngredients);  // Met à jour le champ caché
+
+            // Réactiver les ingrédients si un est supprimé
+            disableSelectedIngredients(); // Re-vérifier les ingrédients désactivés
+
+            // Fermer le pop-up après sélection
+            ingredientPopup.style.display = 'none';
+        }
+    });
+
+    // Supprimer un ingrédient
+    ingredientsContainer.addEventListener('click', (e) => {
+        if (e.target && e.target.classList.contains('remove-ingredient')) {
+            const ingredientDiv = e.target.closest('.ingredient-item');
+            const ingredientId = ingredientDiv.getAttribute('data-id'); // Récupérer l'ID de l'ingrédient à supprimer
+
+            // Supprimer l'élément visuel
+            ingredientDiv.remove();
+
+            // Mettre à jour le champ caché
+            selectedIngredients = selectedIngredients.filter(id => id !== ingredientId); // Retirer l'ingrédient supprimé
+            selectedIngredientsField.value = JSON.stringify(selectedIngredients); // Met à jour le champ caché
+
+            // Réactiver les ingrédients
+            disableSelectedIngredients(); // Re-vérifier les ingrédients désactivés
+        }
+    });
+
+    // Appeler la fonction au chargement de la page pour masquer 'stepSimult' pour la première étape
+    hideStepSimultForFirstStep();
+    
+    // Ajouter une étape
+    addStepButton.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        const prototype = stepsContainer.dataset.prototype;
+        const newForm = prototype.replace(/__name__/g, stepIndex);
+
+        const newStepElement = document.createElement('div');
+        newStepElement.classList.add('step-item');
+
+        // Création de la structure HTML de la nouvelle étape avec un div contenteditable
+        newStepElement.innerHTML = `
+            ${newForm}
+            <div><p>Ajoutez ici la description de l'étape. (ou ajoutez des operations sur les ingrédients)</p></div>
+            <div class="step-description" contenteditable="true" id="step-description-${stepIndex}">
+                
+            </div>
+            <button type="button" class="remove-step">Remove</button>
+            <div class="operations-container">
+                <h4>Opérations sur les Ingrédients</h4>
+                <button class="add-operation-button" type="button">Ajouter une opération</button>
+                <div class="operation-popup popup" style="display: none;">
+                    <div class="popup-content">
+                        <h5>Ajouter une opération</h5>
+                        <select class="operation-select">
+                            <option value="">Choisissez une opération</option>
+                            ${operations.map(op => `<option value="${op.id}">${op.name}</option>`).join('')}
+                        </select>
+                        <select class="ingredient-select">
+                            <option value="">Choisissez un ingrédient</option>
+                        </select>
+                        <input type="text" class="result-description" placeholder="Description de l'opération">
+                        <button class="save-operation-button" type="button">Ajouter</button>
+                        <button class="close-operation-popup" type="button">Fermer</button>
+                    </div>
+                </div>
+                <div class="added-operations">
+                    <input type="hidden" class="selected-operations" name="selected-operations" value="[]">
+                </div>
+            </div>
+        `;
+
+        stepsContainer.appendChild(newStepElement);
+        stepIndex++;
+
+        hideStepSimultForFirstStep();
+    });
+
+    // Supprimer une étape
+    stepsContainer.addEventListener('click', (e) => {
+        if (e.target && e.target.classList.contains('remove-step')) {
+            e.target.closest('.step-item').remove();
+
+            // Après suppression, réappliquer la logique pour vérifier les étapes restantes
+            hideStepSimultForFirstStep();
+        }
+    });
+
+    // Gérer les opérations sur les ingrédients
+    stepsContainer.addEventListener('click', (e) => {
+        const stepItem = e.target.closest('.step-item');
+
+        // Ouvrir le popup d'opération
+        if (e.target && e.target.classList.contains('add-operation-button')) {
+            const operationPopup = e.target.nextElementSibling;
+            updateIngredientOptions(operationPopup);
+            operationPopup.style.display = 'block';
+        }
+
+        // Fermer le popup d'opération
+        if (e.target && e.target.classList.contains('close-operation-popup')) {
+            const operationPopup = e.target.closest('.operation-popup');
+            operationPopup.style.display = 'none';
+        }
+
+        // Sauvegarder une opération dans la description et le champ caché
+        if (e.target && e.target.classList.contains('save-operation-button')) {
+            const popup = e.target.closest('.operation-popup');
+            const operationSelect = popup.querySelector('.operation-select');
+            const ingredientSelect = popup.querySelector('.ingredient-select');
+            const stepDescription = stepItem.querySelector('.step-description');
+            const operationsContainer = stepItem.querySelector('.added-operations');
+
+            // const stepId = stepItem.querySelector('input[name*="[stepId]"]').value; // Récupérer l'ID de l'étape
+            const operationId = operationSelect.value;
+            const operationName = operationSelect.options[operationSelect.selectedIndex]?.text;
+            const ingredientId = ingredientSelect.value;
+            const ingredientName = ingredientSelect.options[ingredientSelect.selectedIndex]?.text;
+
+            // Vérification des champs requis
+            if (operationId && ingredientId) {
+                // Identifier l'étape par son index dans le conteneur
+                const stepIndex = [...stepsContainer.children].indexOf(stepItem) -1;
+                console.log(stepIndex);
+
+                // Ajouter visuellement l'opération à la description de l'étape
+                stepDescription.innerHTML += `
+                    <p>
+                        <strong class="operation">${operationName}</strong> 
+                        <strong>-</strong> 
+                        <strong class="ingredient">${ingredientName}</strong>
+                    </p>`;
+
+                // Synchroniser les données avec le champ caché
+                const selectedOperationsField = operationsContainer.querySelector('.selected-operations');
+                let stepOperations = JSON.parse(selectedOperationsField.value || '[]');
+
+                // Ajouter une nouvelle opération liée à l'étape
+                stepOperations.push({
+                    stepIndex: stepIndex,
+                    operationId: parseInt(operationId),
+                    ingredientId: parseInt(ingredientId),
+                });
+
+                selectedOperationsField.value = JSON.stringify(stepOperations);
+
+                // Fermer le popup après sauvegarde
+                popup.style.display = 'none';
+            } else {
+                alert('Veuillez remplir tous les champs pour l’opération.');
+            }
+        }
+    });
+
+    // Synchroniser les contenus au moment de la soumission
+    document.querySelector('form[name="recipe"]').addEventListener('submit', () => {
+        const stepItems = stepsContainer.querySelectorAll('.step-item');
+        const allSelectedOperations = [];
+
+        stepItems.forEach((stepItem, index) => {
+            // Synchroniser le contenu de la description de l'étape avec le champ caché
+            syncStepDescription(stepItem);
+
+            // Vérifier les opérations associées à chaque étape
+            const operationsContainer = stepItem.querySelector('.added-operations');
+            const selectedOperationsField = operationsContainer.querySelector('.selected-operations');
+            const stepOperations = JSON.parse(selectedOperationsField.value || '[]');
+
+            // Vérifier qu'il y a bien des opérations associées, sinon un message d'avertissement
+            if (stepOperations.length === 0) {
+                console.warn(`Aucune opération associée à l'étape ${index + 1} (index ${index}).`);
+            }
+
+            // Ajouter le stepIndex à toutes les opérations pour la soumission
+            stepOperations.forEach((operation) => {
+                if (!operation.stepIndex) {
+                    operation.stepIndex = index; // Utilise l'index de l'étape
+                }
+            });
+
+            // Ajouter les opérations de cette étape au tableau global
+            allSelectedOperations.push(...stepOperations);
+
+            // Mettre à jour le champ caché avec les opérations modifiées
+            selectedOperationsField.value = JSON.stringify(stepOperations); // Sérialisation
+        });
+        // Mettre à jour le champ caché global avec toutes les opérations
+        const allSelectedOperationsField = document.getElementById('all-selected-operations');
+        allSelectedOperationsField.value = JSON.stringify(allSelectedOperations);
+    });
+
+});
+</script>
+{% endblock %}

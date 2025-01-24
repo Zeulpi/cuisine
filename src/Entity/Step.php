@@ -7,6 +7,10 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use App\Entity\Recipe;
+use App\Entity\StepOperation;
+use App\Entity\Operation;
+use App\Entity\Ingredient;
 
 #[ORM\Entity(repositoryClass: StepRepository::class)]
 class Step
@@ -31,22 +35,19 @@ class Step
     #[ORM\Column]
     private ?bool $stepSimult = null;
 
-    /**
-     * @var Collection<int, Recipe>
-     */
-    #[ORM\ManyToMany(targetEntity: Recipe::class, mappedBy: 'recipeStep')]
-    private Collection $stepRecipe;
+    #[ORM\ManyToOne(inversedBy: 'recipeSteps')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Recipe $stepRecipe = null;
 
     /**
-     * @var Collection<int, Ingredient>
+     * @var Collection<int, StepOperation>
      */
-    #[ORM\ManyToMany(targetEntity: Ingredient::class, mappedBy: 'ingredientStep')]
-    private Collection $stepIngredient;
+    #[ORM\OneToMany(targetEntity: StepOperation::class, mappedBy: 'step', orphanRemoval: true, cascade: ['persist', 'remove'])]
+    private Collection $stepOperations;
 
     public function __construct()
     {
-        $this->stepRecipe = new ArrayCollection();
-        $this->stepIngredient = new ArrayCollection();
+        $this->stepOperations = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -114,55 +115,43 @@ class Step
         return $this;
     }
 
-    /**
-     * @return Collection<int, Recipe>
-     */
-    public function getStepRecipe(): Collection
+    
+    public function getStepRecipe(): ?Recipe
     {
         return $this->stepRecipe;
     }
 
-    public function addStepRecipe(Recipe $stepRecipe): static
+    public function setStepRecipe(?Recipe $stepRecipe): static
     {
-        if (!$this->stepRecipe->contains($stepRecipe)) {
-            $this->stepRecipe->add($stepRecipe);
-            $stepRecipe->addRecipeStep($this);
-        }
-
-        return $this;
-    }
-
-    public function removeStepRecipe(Recipe $stepRecipe): static
-    {
-        if ($this->stepRecipe->removeElement($stepRecipe)) {
-            $stepRecipe->removeRecipeStep($this);
-        }
+        $this->stepRecipe = $stepRecipe;
 
         return $this;
     }
 
     /**
-     * @return Collection<int, Ingredient>
+     * @return Collection<int, StepOperation>
      */
-    public function getStepIngredient(): Collection
+    public function getStepOperations(): Collection
     {
-        return $this->stepIngredient;
+        return $this->stepOperations;
     }
 
-    public function addStepIngredient(Ingredient $stepIngredient): static
+    public function addStepOperation(StepOperation $stepOperation): self
     {
-        if (!$this->stepIngredient->contains($stepIngredient)) {
-            $this->stepIngredient->add($stepIngredient);
-            $stepIngredient->addIngredientStep($this);
+        if (!$this->stepOperations->contains($stepOperation)) {
+            $this->stepOperations->add($stepOperation);
+            $stepOperation->setStep($this);
         }
 
         return $this;
     }
 
-    public function removeStepIngredient(Ingredient $stepIngredient): static
+    public function removeStepOperation(StepOperation $stepOperation): self
     {
-        if ($this->stepIngredient->removeElement($stepIngredient)) {
-            $stepIngredient->removeIngredientStep($this);
+        if ($this->stepOperations->removeElement($stepOperation)) {
+            if ($stepOperation->getStep() === $this) {
+                $stepOperation->setStep(null);
+            }
         }
 
         return $this;

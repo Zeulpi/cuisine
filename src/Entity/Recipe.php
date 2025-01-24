@@ -28,22 +28,22 @@ class Recipe
     private Collection $recipeNote;
 
     /**
-     * @var Collection<int, Step>
+     * @var Collection<int, Ingredient>
      */
-    #[ORM\ManyToMany(targetEntity: Step::class, inversedBy: 'stepRecipe')]
-    private Collection $recipeStep;
+    #[ORM\ManyToMany(targetEntity: Ingredient::class, inversedBy: 'ingredientRecipe')]
+    private Collection $recipeIngredient;
 
     /**
-     * @var Collection<int, ingredient>
+     * @var Collection<int, Step>
      */
-    #[ORM\ManyToMany(targetEntity: ingredient::class, inversedBy: 'ingredientRecipe')]
-    private Collection $recipeIngredient;
+    #[ORM\OneToMany(targetEntity: Step::class, mappedBy: 'stepRecipe', orphanRemoval: true, cascade: ['persist', 'remove'])]
+    private Collection $recipeSteps;
 
     public function __construct()
     {
         $this->recipeNote = new ArrayCollection();
-        $this->recipeStep = new ArrayCollection();
         $this->recipeIngredient = new ArrayCollection();
+        $this->recipeSteps = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -100,30 +100,6 @@ class Recipe
     }
 
     /**
-     * @return Collection<int, Step>
-     */
-    public function getRecipeStep(): Collection
-    {
-        return $this->recipeStep;
-    }
-
-    public function addRecipeStep(Step $recipeStep): static
-    {
-        if (!$this->recipeStep->contains($recipeStep)) {
-            $this->recipeStep->add($recipeStep);
-        }
-
-        return $this;
-    }
-
-    public function removeRecipeStep(Step $recipeStep): static
-    {
-        $this->recipeStep->removeElement($recipeStep);
-
-        return $this;
-    }
-
-    /**
      * @return Collection<int, ingredient>
      */
     public function getRecipeIngredient(): Collection
@@ -143,6 +119,36 @@ class Recipe
     public function removeRecipeIngredient(ingredient $recipeIngredient): static
     {
         $this->recipeIngredient->removeElement($recipeIngredient);
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Step>
+     */
+    public function getRecipeSteps(): Collection
+    {
+        return $this->recipeSteps;
+    }
+
+    public function addRecipeStep(Step $recipeStep): static
+    {
+        if (!$this->recipeSteps->contains($recipeStep)) {
+            $this->recipeSteps->add($recipeStep);
+            $recipeStep->setStepRecipe($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRecipeStep(Step $recipeStep): static
+    {
+        if ($this->recipeSteps->removeElement($recipeStep)) {
+            // set the owning side to null (unless already changed)
+            if ($recipeStep->getStepRecipe() === $this) {
+                $recipeStep->setStepRecipe(null);
+            }
+        }
 
         return $this;
     }
