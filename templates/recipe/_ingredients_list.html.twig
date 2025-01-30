@@ -1,0 +1,23 @@
+{% block stylesheets %}
+    <pre><link rel="stylesheet" href="{{ asset('styles/ingredient_popup.css') }}"></pre>
+    <pre><link rel="stylesheet" href="{{ asset('styles/recipe_create.css') }}"></pre>
+{% endblock %}
+
+<div id="ingredients-list" class="ingredients-list">
+    {% for ingredient in ingredients %}
+        <div class="ingredient-card" data-id="{{ ingredient.id }}" data-image="{{ ingredient.image }}" data-name="{{ ingredient.ingredientName }}">
+            <img src="{{ asset('images/ingredients/' ~ ingredient.image) }}" alt="{{ ingredient.ingredientName }}" style="width: 100px;">
+            <p>{{ ingredient.ingredientName }}</p>
+        </div>
+    {% else %}
+        <p>No ingredients found.</p>
+    {% endfor %}
+</div>
+
+{# Afficher les boutons de pagination #}
+<div class="pagination">
+    <button type="button" class="prev" data-page="{{ page - 1 }}" {% if page <= 1 %}class="disabled" disabled{% endif %}>Précédent</button>
+    <span>Page {{ page }} / {{ totalPages }}</span>
+    <button type="button" class="next" data-page="{{ page + 1 }}" {% if page == totalPages %}class="disabled" disabled{% endif %}>Suivant</button>
+</div>
+<input type="hidden" id="total-pages" value="{{ totalPages }}">

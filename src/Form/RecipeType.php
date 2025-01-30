@@ -7,11 +7,7 @@ use App\Entity\Step;
 use App\Entity\Ingredient;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType;
-use Symfony\Component\Form\Extension\Core\Type\FileType;
-use Symfony\Component\Form\Extension\Core\Type\HiddenType;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use Symfony\Component\Form\Extension\Core\Type\{TextType, CollectionType, FileType, HiddenType, EntityType, IntegerType};
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
@@ -22,6 +18,7 @@ class RecipeType extends AbstractType
     {
         $builder
             ->add('recipeName', TextType::class)
+            ->add('recipePortions', IntegerType::class)
             ->add('recipeSteps', CollectionType::class, [
                 'entry_type' => StepType::class, // Formulaire pour chaque étape
                 'allow_add' => true, // Permet d'ajouter dynamiquement des étapes

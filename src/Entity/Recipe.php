@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\RecipeRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: RecipeRepository::class)]
@@ -38,6 +39,12 @@ class Recipe
      */
     #[ORM\OneToMany(targetEntity: Step::class, mappedBy: 'stepRecipe', orphanRemoval: true, cascade: ['persist', 'remove'])]
     private Collection $recipeSteps;
+
+    #[ORM\Column(type: Types::SMALLINT)]
+    private ?int $recipePortions = null;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private $recipeQuantities = [];
 
     public function __construct()
     {
@@ -149,6 +156,48 @@ class Recipe
                 $recipeStep->setStepRecipe(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getRecipePortions(): ?int
+    {
+        return $this->recipePortions;
+    }
+
+    public function setRecipePortions(int $recipePortions): static
+    {
+        $this->recipePortions = $recipePortions;
+
+        return $this;
+    }
+
+    public function getRecipeQuantities(): array
+    {
+        return $this->recipeQuantities ?? [];
+    }
+
+    public function setRecipeQuantities(array $recipeQuantities): self
+    {
+        $this->recipeQuantities = $recipeQuantities;
+
+        return $this;
+    }
+
+    public function addIngredientQuantity(int $ingredientId, float $quantity, string $unit = ''): self
+    {
+        // Ajouter la quantité et l'unité au tableau des quantités de la recette
+        $this->recipeQuantities[$ingredientId] = [
+            'quantity' => $quantity,
+            'unit' => $unit, // Ajouter l'unité
+        ];
+
+        return $this;
+    }
+
+    public function removeIngredientQuantity(int $ingredientId): self
+    {
+        unset($this->recipeQuantities[$ingredientId]);
 
         return $this;
     }

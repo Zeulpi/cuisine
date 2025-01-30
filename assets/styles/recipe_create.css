@@ -13,5 +13,17 @@
     background-color: aliceblue;
     border: rounded 1px #007bff;
     border-radius: 5px;
-
+}
+.step-operation {
+    box-sizing: border-box;
+    color: #6c757d;  /* Gris pour les descriptions d'étapes */
+    background-color: lightblue;
+    border: solid 1px lightskyblue;
+    border-radius: 5px;
+    min-height: 27px;
+    padding: 2px;
+}
+.operation-item{
+    border: solid 1px lightslategray;
+    border-radius: 2px;
 }

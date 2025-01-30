@@ -20,6 +20,7 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 
 
 
@@ -41,11 +42,18 @@ final class RecipeCreate extends AbstractController{
         ): Response
     {
         $recipe = $recipe ?? new Recipe();
-        $ingredients = $ingredientRepository->findAll();
-        $operations = $operationRepository->findAll();
+
+
+        // Récupérer les ingrédients pour la page demandée
+        $ingredients = $ingredientRepository->findBy([], ['ingredientName' => 'ASC']);
+        // Récuperer les operations par ordre alphabétique
+        $operations = $operationRepository->findBy([], ['operationName' => 'ASC']); // ASC pour tri ascendant
+        
         $operationsArray = [];
         $ingredientsArray = [];
+        $ingredientsPerPage = 8;
 
+        // transformer les ingrédients en tableau pour les envoyer à la vue
         foreach ($ingredients as $ingredient) {
             $ingredientsArray[] = [
                 'id' => $ingredient->getId(),
@@ -53,6 +61,8 @@ final class RecipeCreate extends AbstractController{
                 'image' => $ingredient->getIngredientImg(), // Si applicable
             ];
         }
+
+        // transformer les opérations en tableau pour les envoyer à la vue
         foreach ($operations as $operation) {
             $operationsArray[] = [
                 'id' => $operation->getId(),
@@ -76,10 +86,20 @@ final class RecipeCreate extends AbstractController{
             // Gestion des ingrédients
             if ($selectedIngredients) {
                 // Décode les ingrédients sélectionnés
-                foreach ($selectedIngredients as $ingredientId) {
+                foreach ($selectedIngredients as $ingredientData) {
+                    $ingredientId = $ingredientData['ingredientId'];
+                    $quantity = $ingredientData['quantity'];
+                    $unit = isset($ingredientData['unit']) ? $ingredientData['unit'] : ''; // Récupérer l'unité, ou vide si non spécifié
+
+                    // Trouver l'ingrédient dans la base de données
                     $ingredient = $ingredientRepository->find($ingredientId);
+                    
                     if ($ingredient) {
+                        // Ajouter l'ingrédient à la recette
                         $recipe->addRecipeIngredient($ingredient);
+                        
+                        // Ajouter la quantité et l'unité associée à cet ingrédient
+                        $recipe->addIngredientQuantity($ingredientId, $quantity, $unit); // Assurez-vous que cette méthode prend aussi l'unité en paramètre
                     }
                 }
             }
@@ -166,6 +186,7 @@ final class RecipeCreate extends AbstractController{
         return $this->render('recipe/create.html.twig', [
             'form' => $form->createView(),
             'ingredients' => $ingredientsArray,
+            'ingredientsPerPage' => $ingredientsPerPage,
             'operations' => $operationsArray,
             'steps' => $recipe->getRecipeSteps(),
         ]);

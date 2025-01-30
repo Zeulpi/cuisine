@@ -8,7 +8,7 @@ use App\Entity\Tool;
 use App\Entity\Step;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Config\{Action, Actions, Crud, KeyValueStore};
-use EasyCorp\Bundle\EasyAdminBundle\Field\{IdField, EmailField, TextField, ArrayField, AssociationField, BooleanField, TextEditorField, ChoiceField, ImageField, DateField};
+use EasyCorp\Bundle\EasyAdminBundle\Field\{IdField, EmailField, TextField, ArrayField, AssociationField, BooleanField, TextEditorField, ChoiceField, CollectionField, ImageField, DateField, IntegerField};
 
 class RecipeCrudController extends AbstractCrudController
 {
@@ -32,6 +32,7 @@ class RecipeCrudController extends AbstractCrudController
         return [
             IdField::new('id')->hideOnForm(),
             TextField::new('recipe_name', 'Nom de la recette'),
+            IntegerField::new('recipe_portions', 'Nombre de portions'),
             ImageField::new('recipe_img', 'Image de la recette')
             ->setUploadDir('public/images/recipes/') 
             ->setBasePath('images/recipes/')
