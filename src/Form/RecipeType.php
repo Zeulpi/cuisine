@@ -33,7 +33,11 @@ class RecipeType extends AbstractType
             ])
             ->add('selectedIngredients', HiddenType::class, [
                 'mapped' => false,  // Le champ n'est pas mappé à une propriété de l'entité
-                'attr' => ['id' => 'selected-ingredients'],  // ID pour manipuler avec JS
+                'attr' => [
+                    'id' => 'selected-ingredients',
+                    'name' => 'selected-ingredients',
+                    'value' => '[]'
+                ],  // ID pour manipuler avec JS
             ])
             ;
     }

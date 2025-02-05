@@ -77,11 +77,13 @@ final class RecipeCreate extends AbstractController{
             $image = $form->get('image')->getData();
             $steps = $recipe->getRecipeSteps();
             $selectedIngredientsJson = $request->request->get('selected-ingredients');
+            $resultIngredientsJson = $request->request->get('result-ingredients');
             $selectedIngredients = json_decode($selectedIngredientsJson, true);
+            $resultIngredients = json_decode($resultIngredientsJson, true);
             $allSelectedOperationsJson = $request->request->get('all-selected-operations');
             $allSelectedOperations = json_decode($allSelectedOperationsJson, true);
 
-            // dd($allSelectedOperations);
+            dd($request->request->all());
 
             // Gestion des ingrédients
             if ($selectedIngredients) {
@@ -103,11 +105,14 @@ final class RecipeCreate extends AbstractController{
                     }
                 }
             }
+
+            //Gestion des Etapes
             foreach ($steps as $index => $step) {
                 $step->setStepNumber($index + 1); // L'ordre commence à 1
                 $step->setStepRecipe($recipe);  // Lier la recette à chaque étape
             }
 
+            //Gestion de l'image (thumbnail de recette)
             if ($image) {
                 // Renommer l'image avec un nom unique
                 $originalFilename = pathinfo($image->getClientOriginalName(), PATHINFO_FILENAME);
@@ -134,7 +139,7 @@ final class RecipeCreate extends AbstractController{
             $entityManager->persist($recipe); // Enregistrer la recette
             $entityManager->flush(); // Sauvegarder dans la base de données
 
-            // Recharger les étapes après avoir persisté la recette
+            // Recharger les étapes après avoir enregistré la recette
             $steps = $recipe->getRecipeSteps();
 
             // Gestion des opérations

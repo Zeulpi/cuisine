@@ -23,7 +23,7 @@ class StepOperation
     private ?Operation $operation = null;
 
     #[ORM\ManyToOne(targetEntity: Ingredient::class, inversedBy: 'stepOperations')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Ingredient $ingredient = null;
 
     #[ORM\Column(type: Types::JSON, nullable: true)]

@@ -27,3 +27,19 @@
     border: solid 1px lightslategray;
     border-radius: 2px;
 }
+
+.step-item {
+    border: solid 1px lightslategray;
+    border-radius: 2px;
+    padding: 2px;
+}
+
+/* Couleur de fond pour les ingrédients de la recette dans le popup operations */
+.ingredient-option {
+    background-color: #FFF9C4;
+}
+
+/* Couleur de fond pour les ingrédients intermédiaires dans le popup operations*/
+.result-ingredient-option {
+    background-color: #C8E6C9;
+}

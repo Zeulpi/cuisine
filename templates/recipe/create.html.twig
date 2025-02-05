@@ -58,7 +58,7 @@
                 </div>
             </div>
             <div id="ingredients-container">
-                <input type="hidden" id="selected-ingredients" name="selected-ingredients" value="[]">
+                {{ form_row(form.selectedIngredients) }}
                 <input type="hidden" id="result-ingredients" name="result-ingredients" value="[]">
             </div>
         </div>
@@ -130,7 +130,7 @@
                         </select>
 
                         <!-- Description du résultat -->
-                        <input type="text" class="result-description" placeholder="(ex : Eplucher 5 pommes de terre)">
+                        <input type="text" class="result-description" placeholder="(ex : Oignons ciselés)">
 
                         <button class="save-operation-button" type="button">Ajouter</button>
                         <button class="close-operation-popup" type="button">Fermer</button>
@@ -147,6 +147,16 @@
         <button type="submit">Save Recipe</button>
     {{ form_end(form) }}
 
+    <!-- Popup de confirmation -->
+    <div id="confirmation-popup" class="popup" style="display:none;">
+        <div class="popup-overlay"></div>
+        <div class="popup-content">
+            <p id="confirmation-message"></p>
+            <button id="confirm-delete" class="btn btn-danger">Confirmer</button>
+            <button id="cancel-delete" class="btn btn-secondary">Annuler</button>
+        </div>
+    </div>
+
     <a href="{{ path('app_recipe') }}">back to list</a>
 </div>
 
@@ -160,6 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const addStepButton = document.createElement('button');
     const addOperationButton = document.getElementById('add-operation-button');
     const operationPopup = document.getElementById('operation-popup');
+    const confirmationPopup = document.getElementById('confirmation-popup');
     const closeOperationPopupButton = document.getElementById('close-operation-popup');
     const saveOperationButton = document.getElementById('save-operation-button');
     const operationsContainer = document.getElementById('operations-container');
@@ -186,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const operations = {{ operations|json_encode|raw }};
 
     // Récupérer les ingrédients déjà ajoutés à la recette
-    const selectedIngredientsField = document.getElementById('selected-ingredients');
+    const selectedIngredientsField = document.getElementById('recipe_selectedIngredients');
     let selectedIngredients = JSON.parse(selectedIngredientsField.value || '[]');
 
     // Récupérer les ingrédients intermédiaires
@@ -202,8 +213,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         ingredientSelect.innerHTML = '<option value="">Choisissez un ingrédient</option>'; // Réinitialiser
 
+        // Récupérer l'index de l'étape actuelle
+        const currentStepIndex = parseInt(activeStepItem.querySelector('[id^="recipe_recipeSteps_"]').id.split('_').pop());
+
         // Récupérer les ingrédients sélectionnés avec leurs quantités
-        const selectedIngredientsField = document.getElementById('selected-ingredients');
+        const selectedIngredientsField = document.getElementById('recipe_selectedIngredients');
         const selectedIngredients = JSON.parse(selectedIngredientsField?.value || '[]');
 
         //Recupérer les ingrédients intermédiaires
@@ -219,19 +233,94 @@ document.addEventListener('DOMContentLoaded', () => {
                 const option = document.createElement('option');
                 option.value = ingredient.id;
                 option.textContent = ingredient.ingredientName;
+                option.classList.add('ingredient-option');
                 ingredientSelect.appendChild(option);
             }
         });
 
-        
-        // Ajout des operationResult a la selection
-        resultIngredients.forEach(resultIngredient => {
-            // Ajouter l'ingrédient intermédiaire au menu déroulant
-            const option = document.createElement('option');
-            option.value = resultIngredient.resultId;
-            option.textContent = resultIngredient.resultName;
-            ingredientSelect.appendChild(option);
+        // Récupérer les résultats d'opération AVANT ou À l'étape actuelle
+        let validResultIds = new Set();
+        stepItems.forEach(step => {
+            const stepIndex = parseInt(step.querySelector('[id^="recipe_recipeSteps_"]').id.split('_').pop());
+            
+            if (stepIndex <= currentStepIndex) {
+                const selectedOperationsField = step.querySelector('.selected-operations');
+                const selectedOperations = JSON.parse(selectedOperationsField?.value || '[]');
+
+                selectedOperations.forEach(operation => {
+                    if (operation.operationResult !== null) {
+                        validResultIds.add(operation.operationResult);
+                    }
+                });
+            }
         });
+
+        // Vérifier si nous sommes en mode édition
+        const editingOperationId = popup.getAttribute('data-editing-operation-id');
+        console.log(editingOperationId);
+        let currentResultId = null;
+        
+        if (editingOperationId) {
+            const operationItem = document.getElementById(editingOperationId);
+            const resultDescriptionElement = operationItem.querySelector('span[id^="result_"]');
+            if (resultDescriptionElement) {
+                currentResultId = parseInt(resultDescriptionElement.id.split('_')[1]);
+            }
+        }
+
+        // Ajout des ingrédients intermédiaires valides, excluant le résultat actuel de l'opération modifiée
+        resultIngredients.forEach(resultIngredient => {
+            // Ajouter l'ingrédient si il est valide et ce n'est pas le résultat de l'opération modifiée
+            if (validResultIds.has(resultIngredient.resultId) && resultIngredient.resultId !== currentResultId) {
+                const option = document.createElement('option');
+                option.value = resultIngredient.resultId;
+                option.textContent = resultIngredient.resultName;
+                option.classList.add('result-ingredient-option');
+                ingredientSelect.appendChild(option);
+            }
+        });
+    }
+
+    //Fonction pour mettre a jour les operations dépendantes apres edition d'une opération
+    function updateOperationResults(newResultId, newResultName) {
+        const stepItems = stepsContainer.querySelectorAll('.step-item');
+        stepItems.forEach(step => {
+            const operationItems = step.querySelectorAll('.step-frame .operation-item');
+
+            operationItems.forEach(operationItem => {
+                // Récupérer les éléments de l'opération et de l'ingrédient
+                const operationElement = operationItem.querySelector('.operation');
+                const ingredientElement = operationItem.querySelector('.ingredient');
+
+                // Vérifier si l'ingrédient ou l'opération est lié au résultat que nous avons mis à jour
+                if (ingredientElement && parseInt(ingredientElement.id.split('_')[2]) === newResultId) {
+                    // Si l'ingrédient utilise le résultat mis à jour, on change le texte de l'ingrédient
+                    ingredientElement.textContent = newResultName;
+                }
+            });
+        });
+    }
+
+    // Afficher le popup de confirmation
+    function showConfirmationPopup(message, callback) {
+        const messageElement = document.getElementById('confirmation-message');
+        const confirmButton = document.getElementById('confirm-delete');
+        const cancelButton = document.getElementById('cancel-delete');
+
+        messageElement.textContent = message; // Insérer le message personnalisé
+        confirmationPopup.style.display = 'block'; // Afficher le popup
+
+        // Lorsque l'utilisateur clique sur "Confirmer"
+        confirmButton.onclick = function() {
+            callback(true);  // Exécuter l'action (par exemple, supprimer)
+            confirmationPopup.style.display = 'none';  // Fermer le popup
+        };
+
+        // Lorsque l'utilisateur clique sur "Annuler"
+        cancelButton.onclick = function() {
+            callback(false); // Ne rien faire
+            confirmationPopup.style.display = 'none';  // Fermer le popup
+        };
     }
 
     function sanitizeInput(input) {
@@ -314,11 +403,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Récupérer la liste des opérations de l'étape en cours
         let stepOperations = JSON.parse(selectedOperationsField.value || '[]');
-        console.log(stepOperations);
 
         // Trouver le resultId avant suppression
         const resultId = stepOperations.find(op => op.operationId === operationId && op.ingredientId === ingredientId)?.operationResult;
-        console.log(resultId);
 
         // Supprimer visuellement l'opération
         operationItem.remove();
@@ -352,7 +439,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const operationId = op.operationId;
 
                 // Sélectionner toutes les opérations ayant le même operationId dans cette étape
-                const operationElements = stepItem.querySelectorAll(`#operation_${stepIndex + 1}_${operationId}`);
+                const stepIdMatch = stepItem.querySelector('[id^="recipe_recipeSteps_"]')?.id.match(/recipe_recipeSteps_(\d+)/);
+                const stepId = stepIdMatch ? stepIdMatch[1] : null;
+                const operationElements = stepItem.querySelectorAll(`#operation_${stepId}_${operationId}`);
                 
                 operationElements.forEach((operationElement) => {
                     // Vérifier si l'ingrédient associé à l'opération est le bon
@@ -363,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (operationIngredientId === deletedIngredientId) {
                         operationElement.closest('.operation-item').remove();  // Supprimer visuellement l'opération
                         // Appeler removeOperation pour mettre à jour les données et supprimer l'opération
-                        removeOperation(operationElement);
+                        document.body.contains(operationElement) ? removeOperation(operationElement) : null;
                     }
                 });
             });
@@ -553,7 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Mettre à jour la quantité dans `selectedIngredients`
-            const selectedIngredientsField = document.getElementById('selected-ingredients');
+            const selectedIngredientsField = document.getElementById('recipe_selectedIngredients');
             let selectedIngredients = JSON.parse(selectedIngredientsField.value || '[]');
 
             // Trouver l'ingrédient et mettre à jour sa quantité
@@ -569,7 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target && e.target.classList.contains('ingredient-unit')) {
 
             // Mettre à jour l'unité dans `selectedIngredients`
-            const selectedIngredientsField = document.getElementById('selected-ingredients');
+            const selectedIngredientsField = document.getElementById('recipe_selectedIngredients');
             let selectedIngredients = JSON.parse(selectedIngredientsField.value || '[]');
 
             // Trouver l'ingrédient et mettre à jour son unité
@@ -588,26 +677,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const ingredientDiv = e.target.closest('.ingredient-item');
             const ingredientId = parseInt(ingredientDiv.getAttribute('data-id')); // Récupérer l'ID de l'ingrédient
 
-            // Supprimer l'élément visuel
-            ingredientDiv.remove();
+            
+            // Afficher le popup de confirmation avant suppression
+            showConfirmationPopup("Si vous supprimez cet ingrédient, toutes les opérations qui en dépendent seront également supprimées. Confirmez-vous la suppression ?", (confirm) => {
+                if (confirm) {
+                    // Supprimer l'élément visuel
+                    ingredientDiv.remove();
 
-            // Mettre à jour le champ caché
-            selectedIngredients = selectedIngredients.filter(ing => ing.ingredientId !== ingredientId);
-            selectedIngredientsField.value = JSON.stringify(selectedIngredients);
+                    // Mettre à jour le champ caché
+                    selectedIngredients = selectedIngredients.filter(ing => ing.ingredientId !== ingredientId);
+                    selectedIngredientsField.value = JSON.stringify(selectedIngredients);
 
-            // Supprimer les opérations contenant cet ingrédient
-            document.querySelectorAll('.operation-item').forEach(operationItem => {
-                const ingredientElement = operationItem.querySelector('.ingredient');
-                
-                if (ingredientElement) {
-                    const extractedId = parseInt(ingredientElement.id.split('_').pop(), 10); // Récupérer l'ingredientId
-                    if (extractedId === ingredientId) {
-                        removeOperation(operationItem); // Utiliser la fonction existante pour supprimer l'opération
-                    }
+                    // Supprimer les opérations contenant cet ingrédient
+                    document.querySelectorAll('.operation-item').forEach(operationItem => {
+                        const ingredientElement = operationItem.querySelector('.ingredient');
+
+                        if (ingredientElement) {
+                            const extractedId = parseInt(ingredientElement.id.split('_').pop(), 10); // Récupérer l'ingredientId
+                            if (extractedId === ingredientId) {
+                                if (document.body.contains(operationItem)) {
+                                    removeOperation(operationItem); // Supprimer avec la fonction existante
+                                }
+                            }
+                        }
+                    });
+
+                    // Réactiver les ingrédients disponibles
+                    disableSelectedIngredients();
+                } else {
+                    console.log("Suppression annulée");
                 }
             });
-            // Réactiver les ingrédients disponibles
-            disableSelectedIngredients();
         }
     });
 
@@ -619,7 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
 
         const prototype = stepsContainer.dataset.prototype;
-        const newForm = prototype.replace(/__name__/g, stepIndex);
+        const newForm = prototype.replace(/__name__/g, stepIndex + 1);
 
         const newStepElement = document.createElement('div');
         newStepElement.classList.add('step-item');
@@ -651,17 +751,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // Supprimer une étape
     stepsContainer.addEventListener('click', (e) => {
         if (e.target && e.target.classList.contains('remove-step')) {
-            e.target.closest('.step-item').remove();
+            const operationsContainer = e.target.closest('.step-item').querySelector('.step-frame .step-operation');
+            const operationItems = operationsContainer.querySelectorAll('.operation-item');
+            
+            // Afficher le popup de confirmation avant suppression
+            showConfirmationPopup("Si vous supprimez cette étape, toutes les opérations qui en dépendent seront également supprimées. Confirmez-vous la suppression ?", (confirm) => {
+                if (confirm) {
+                    operationItems.forEach((operationElement) => {
+                    // Appeler la fonction removeOperation pour chaque operation-item si il existe encore
+                    document.body.contains(operationElement) ? removeOperation(operationElement) : null;
+                    });
+                    e.target.closest('.step-item').remove();
 
-            // Après suppression, réappliquer la logique pour vérifier les étapes restantes
-            hideStepSimultForFirstStep();
+                    // Après suppression, réappliquer la logique pour vérifier les étapes restantes
+                    hideStepSimultForFirstStep();
+                } else {
+                    console.log("Suppression annulée");
+                }
+            });
         }
     });
 
     // Gérer les opérations sur les ingrédients
     stepsContainer.addEventListener('click', (e) => {
 
-        // Ouvrir le popup d'opération
+        // Ajouter une opération
         if (e.target && e.target.classList.contains('add-operation-button')) {
             activeStepItem = e.target.closest('.step-item');
             // Réinitialiser les champs du popup à chaque ouverture
@@ -674,6 +788,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Fermer le popup d'opération
         if (e.target && e.target.classList.contains('close-operation-popup')) {
+            operationPopup.setAttribute('data-editing-operation-id', '');
             operationPopup.style.display = 'none';
         }
 
@@ -695,54 +810,221 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Vérification des champs requis
             if (operationId && ingredientId) {
-                // Identifier l'étape par son index dans le conteneur
-                const stepIndex = [...stepsContainer.querySelectorAll('.step-item')].indexOf(activeStepItem) +1;
-                let stepOperations = JSON.parse(selectedOperationsField.value || '[]');
+                const editingOperationId = operationPopup.getAttribute('data-editing-operation-id');
 
-                // Ajouter visuellement l'opération à la description de l'étape
-                stepOp.innerHTML += `
-                    <div class="operation-item d-flex flex-row gx-3" id="operation-item_${stepIndex}_${stepOperations.length ?? 0}">
-                        <div class="m-2">
-                            <button type="button" class="remove-operation btn btn-danger">x</button>
-                        </div>
-                        <div>
-                            <strong class="operation" id="operation_${stepIndex}_${operationId}">${operationName}</strong> 
-                            <strong>-</strong> 
-                            <strong class="ingredient" id="ingredient_${stepIndex}_${ingredientId}">${ingredientName}</strong>
-                            <br>
-                            ---> ${resultDescription}
-                        </div>
-                    </div>
-                `;
+                // Mode édition : mettre à jour l'opération existante
+                if (editingOperationId) {
+                    const operationItem = document.getElementById(editingOperationId);
+                    let resultToRemove = null;
+                    let currentResultId = null;
+                    
+                    // Trouver l'élément de l'opération à modifier
+                    const operationElement = operationItem.querySelector('.operation');
+                    const ingredientElement = operationItem.querySelector('.ingredient');
+                    
+                    operationElement.textContent = operationSelect.options[operationSelect.selectedIndex].text;
+                    ingredientElement.textContent = ingredientSelect.options[ingredientSelect.selectedIndex].text;
 
-                // Synchroniser les données avec le champ caché des operations
-                stepOperations = JSON.parse(selectedOperationsField.value || '[]');
-                
-                if (resultDescription.trim() !== ""){
-                    newResultId = addResultIngredient(resultDescription);
+                    // Recuperer le nouvel id de l'operation
+                    const updatedOperationId = operationSelect.value;
+                    const currentOperationId = parseInt(operationElement.id.split('_')[2]);
+                    const currentOperationIndex = operationElement.id.split('_')[1]; // 'X' dans 'operation_X_Y'
+
+                    // Recuperer le nouvel id de l'ingredient
+                    const updatedIngredientId = ingredientSelect.value;
+                    const currentIngredientId = parseInt(ingredientElement.id.split('_')[2]);
+                    const currentIngredientIndex = ingredientElement.id.split('_')[1]; // 'X' dans 'operation_X_Y'
+
+                    // Mettre à jour les id operation et ingredient
+                    operationElement.id = `operation_${currentOperationIndex}_${updatedOperationId}`;
+                    ingredientElement.id = `ingredient_${currentIngredientIndex}_${updatedIngredientId}`;
+
+                    const resultDescriptionElement = operationItem.querySelector('span[id^="result_"]');
+                    resultDescriptionElement ? currentResultId = resultDescriptionElement.id.split('_')[1] : null;
+                    if (resultDescription) {
+                        // cas 1 : le resultat existe deja et il est mis a jour
+                        if (resultDescriptionElement) {
+                            resultDescriptionElement.textContent = resultDescription;
+                            newResultId = parseInt(resultDescriptionElement.id.split('_')[1]);
+
+                            // Mise à jour du champ caché des ingrédients intermédiaires
+                            const resultIngredientsField = document.getElementById('result-ingredients');
+                            let resultIngredients = JSON.parse(resultIngredientsField.value || '[]');
+                            resultIngredients = resultIngredients.map(ri => 
+                                ri.resultId == newResultId ? { ...ri, resultName: resultDescription } : ri
+                            );
+
+                            // Mettre à jour le champ caché
+                            resultIngredientsField.value = JSON.stringify(resultIngredients);
+                        }
+                        // cas 3 : le resultat n'existe pas et j'en crée un nouveau
+                        else {
+                            newResultId = addResultIngredient(resultDescription);
+                            // Créer les éléments
+                            const br = document.createElement('br');
+                            const textNode = document.createTextNode(' ---> ');
+                            const arrowSpan = document.createElement('span');
+                            arrowSpan.appendChild(textNode);
+                            const span = document.createElement('span');
+                            span.id = `result_${newResultId}`;
+                            span.textContent = resultDescription;
+                            
+                            // Insérer après l'élément strong.ingredient
+                            ingredientElement.parentNode.insertBefore(br, ingredientElement.nextSibling);
+                            ingredientElement.parentNode.insertBefore(arrowSpan, br.nextSibling);
+                            ingredientElement.parentNode.insertBefore(span, textNode.nextSibling);
+                        }
+                    } else if (resultDescriptionElement) {
+                        // cas 2 : Supprime l'ancienne description si elle devient vide
+                        let resultId = resultDescriptionElement.id.split('_')[1]; // Extrait l'ID du resultat existant
+                        let nextSibling = ingredientElement.nextElementSibling;
+                        while (nextSibling) {
+                            const elementToRemove = nextSibling;
+                            nextSibling = nextSibling.nextElementSibling;
+                            elementToRemove.remove();
+                        }
+
+                        // Selection du champ caché des ingrédients intermédiaires
+                        const resultIngredientsField = document.getElementById('result-ingredients');
+                        let resultIngredients = JSON.parse(resultIngredientsField.value || '[]');
+                        // Supprimer le résultat du champ caché
+                        resultIngredients = resultIngredients.filter(ri => ri.resultId != resultId);
+                        resultIngredientsField.value = JSON.stringify(resultIngredients);
+                        resultToRemove = parseInt(resultId);
+                    }
+
+                    // Mettre à jour les données JSON des opérations
+                    let stepOperations = JSON.parse(selectedOperationsField.value || '[]');
+                    stepOperations = stepOperations.map(op => {
+                        // Vérifier si l'entrée correspond à l'opération en cours de modification
+                        const isSameOperation = 
+                            op.operationId == currentOperationId &&
+                            op.ingredientId == currentIngredientId &&
+                            (op.operationResult == currentResultId || (op.operationResult === null && currentResultId === null));
+
+                        if (isSameOperation) { 
+                            return {
+                                ...op,
+                                operationId: parseInt(updatedOperationId),
+                                ingredientId: parseInt(updatedIngredientId),
+                                operationResult: newResultId !== null ? newResultId : null, // Mettre à jour le résultat si besoin
+                            };
+                        }
+                        return op;
+                    });
+                    selectedOperationsField.value = JSON.stringify(stepOperations);
+
+                    // si le resultat a ete supprimé, supprimer les dépendances en cascade
+                    resultToRemove ? removeDependentOperations(resultToRemove) : null;
+
+                    // Réinitialiser l'attribut du popup
+                    operationPopup.removeAttribute('data-editing-operation-id');
+
+                    // Mise a jour des opérations dépendantes apres edition
+                    if (newResultId !== null) {
+                        updateOperationResults(newResultId, resultDescription); // Passer le nouveau nom du résultat
+                    }
                 }
-                
-                // Ajouter une nouvelle opération liée à l'étape
-                stepOperations.push({
-                    stepIndex: stepIndex,
-                    operationId: parseInt(operationId),
-                    ingredientId: parseInt(ingredientId),
-                    operationResult: newResultId !== null ? newResultId : null, // Stocker l'ID du résultat, ou null si aucun
-                });
+                // Mode Ajout de nouvelle opération
+                else {
+                    // Identifier l'étape par son index dans le conteneur
+                    const stepIdElement = activeStepItem.querySelector('div[id^="recipe_recipeSteps_"]');
+                    const match = stepIdElement.id.match(/recipe_recipeSteps_(\d+)/);
+                    const stepIndex = parseInt(match[1], 10); // Extraire l'index
+                    let stepOperations = JSON.parse(selectedOperationsField.value || '[]');
 
-                selectedOperationsField.value = JSON.stringify(stepOperations);
+                    const resultHtml = resultDescription.trim() !== "" ? (() => {
+                        newResultId = addResultIngredient(resultDescription);
+                        return `<br> <span>---></span> <span id="result_${newResultId}">${resultDescription}</span>`;
+                    })() : "";
+
+                    // Ajouter visuellement l'opération à la description de l'étape
+                    stepOp.innerHTML += `
+                        <div class="operation-item d-flex" id="operation-item_${stepIndex}_${stepOperations.length ?? 0}">
+                            <div class="m-2 operation-remove-frame">
+                                <button type="button" class="remove-operation btn btn-danger">x</button>
+                            </div>
+                            <div class="operation-frame">
+                                <strong class="operation" id="operation_${stepIndex}_${operationId}">${operationName}</strong> 
+                                <strong>-</strong> 
+                                <strong class="ingredient" id="ingredient_${stepIndex}_${ingredientId}">${ingredientName}</strong>
+                                ${resultHtml}
+                            </div>
+                            <div class="m-2 operation-edit-frame ms-auto">
+                                <button type="button" class="edit-operation btn btn-success">...</button>
+                            </div>
+                        </div>
+                    `;
+
+                    // Synchroniser les données avec le champ caché des operations
+                    stepOperations = JSON.parse(selectedOperationsField.value || '[]');
+                    
+                    // Ajouter une nouvelle opération liée à l'étape
+                    stepOperations.push({
+                        stepIndex: stepIndex,
+                        operationId: parseInt(operationId),
+                        ingredientId: parseInt(ingredientId),
+                        operationResult: newResultId !== null ? newResultId : null, // Stocker l'ID du résultat, ou null si aucun
+                    });
+
+                    selectedOperationsField.value = JSON.stringify(stepOperations);
+                }
 
                 // Fermer le popup après sauvegarde
+                operationPopup.setAttribute('data-editing-operation-id', '');
                 operationPopup.style.display = 'none';
             } else {
                 alert('Veuillez remplir tous les champs pour l\'opération.');
             }
         }
 
+        // Editer une opération
+        if (e.target && e.target.classList.contains('edit-operation')) {
+            activeStepItem = e.target.closest('.step-item');
+            const operationItem = e.target.closest('.operation-item');
+
+            // Récupérer les elements DOM de l'opération
+            const operationElement = operationItem.querySelector('.operation');
+            const ingredientElement = operationItem.querySelector('.ingredient');
+            const resultDescriptionElement = operationItem.querySelector('span[id^="result_"]'); // Chercher directement le span avec un ID commençant par "result_"
+
+            // Recuperer les valeurs des elemnts DOM (id et nom de l'operation et de l'ingrédient)
+            const operationId = operationElement.id.split('_').pop();
+            const ingredientId = ingredientElement.id.split('_').pop();
+            const operationName = operationElement.textContent.trim();
+            const ingredientName = ingredientElement.textContent.trim();
+            const resultDescription = resultDescriptionElement ? resultDescriptionElement.textContent.trim() : '';
+
+            // Mettre à jour les champs du popup avec les valeurs actuelles
+            const operationSelect = operationPopup.querySelector('.operation-select');
+            const ingredientSelect = operationPopup.querySelector('.ingredient-select');
+            const descriptionInput = operationPopup.querySelector('.result-description');
+
+            // Sauvegarder l'opération actuelle dans une variable pour la modifier après validation
+            operationPopup.setAttribute('data-editing-operation-id', operationItem.id);
+
+            // Mettre à jour la liste des ingrédients dans le popup
+            updateIngredientOptions(operationPopup);
+
+            operationSelect.value = operationId;
+            ingredientSelect.value = ingredientId;
+            descriptionInput.value = resultDescription;
+
+            // Afficher le popup
+            operationPopup.style.display = 'block';
+        }
+
         // Supprimer une opération
         if (e.target && e.target.classList.contains('remove-operation')) {
             const operationItem = e.target.closest('.operation-item');
-            removeOperation(operationItem);
+            // Afficher le popup de confirmation avant suppression
+            showConfirmationPopup("Si vous supprimez cette opération, toutes les opérations qui en dépendent seront également supprimées. Confirmez-vous la suppression ?", (confirm) => {
+                if (confirm) {
+                    removeOperation(operationItem);
+                } else {
+                    console.log("Suppression annulée");
+                }
+            });
         }
     });
     
@@ -788,13 +1070,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Synchroniser les contenus au moment de la soumission
     document.querySelector('form[name="recipe"]').addEventListener('submit', (e) => {
-        e.preventDefault();
         
         const stepItems = stepsContainer.querySelectorAll('.step-item');
         const allSelectedOperations = [];
 
         // Vérifier que des ingrédients ont été sélectionnés
-        const selectedIngredientsField = document.getElementById('selected-ingredients');
+        const selectedIngredientsField = document.getElementById('recipe_selectedIngredients');
         const selectedIngredients = JSON.parse(selectedIngredientsField.value || '[]');
         if (selectedIngredients.length === 0) {
             alert('Veuillez sélectionner au moins un ingrédient avant de soumettre.');
