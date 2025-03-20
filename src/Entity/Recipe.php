@@ -17,12 +17,15 @@ class Recipe
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['recipe:list', 'recipe:detail'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['recipe:list', 'recipe:detail'])]
     private ?string $recipeName = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['recipe:list', 'recipe:detail'])]
     private ?string $recipeImg = null;
 
     /**
@@ -36,24 +39,29 @@ class Recipe
      */
     #[ORM\ManyToMany(targetEntity: Ingredient::class, inversedBy: 'ingredientRecipe')]
     #[Ignore]
+    #[Groups(['recipe:detail'])]
     private Collection $recipeIngredient;
 
     /**
      * @var Collection<int, Step>
      */
     #[ORM\OneToMany(targetEntity: Step::class, mappedBy: 'stepRecipe', orphanRemoval: true, cascade: ['persist', 'remove'], fetch: 'EAGER')]
+    #[Groups(['recipe:detail'])]
     private Collection $recipeSteps;
 
     #[ORM\Column(type: Types::SMALLINT)]
+    #[Groups(['recipe:detail'])]
     private ?int $recipePortions = null;
 
     #[ORM\Column(type: Types::JSON, nullable: true)]
+    #[Groups(['recipe:detail'])]
     private $recipeQuantities = [];
 
     /**
      * @var Collection<int, Tag>
      */
     #[ORM\ManyToMany(targetEntity: Tag::class, inversedBy: 'tagRecipe', fetch: 'EAGER')]
+    #[Groups(['recipe:list', 'recipe:detail'])]
     private Collection $recipeTags;
 
     public function __construct()
