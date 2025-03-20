@@ -6,6 +6,8 @@ use App\Repository\IngredientRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\Ignore;
 
 #[ORM\Entity(repositoryClass: IngredientRepository::class)]
 class Ingredient
@@ -13,15 +15,18 @@ class Ingredient
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['ingredient:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['ingredient:read'])]
     private ?string $ingredientName = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $ingredientUnit = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['ingredient:read'])]
     private ?string $ingredientImg = null;
 
     /**
@@ -33,7 +38,7 @@ class Ingredient
     /**
      * @var Collection<int, StepOperation>
      */
-    #[ORM\OneToMany(targetEntity: StepOperation::class, mappedBy: 'ingredient', orphanRemoval: true, cascade: ['persist', 'remove'])]
+    #[ORM\OneToMany(targetEntity: StepOperation::class, mappedBy: 'ingredient', orphanRemoval: true, cascade: ['persist', 'remove'], fetch: 'EAGER')]
     private Collection $stepOperations;
 
     public function __construct()

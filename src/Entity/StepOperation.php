@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\StepOperationRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\DBAL\Types\Types;
+use Symfony\Component\Serializer\Annotation\Ignore;
 
 #[ORM\Entity(repositoryClass: StepOperationRepository::class)]
 class StepOperation
@@ -18,7 +19,7 @@ class StepOperation
     #[ORM\JoinColumn(nullable: false)]
     private ?Step $step = null;
 
-    #[ORM\ManyToOne(targetEntity: Operation::class, inversedBy: 'stepOperations')]
+    #[ORM\ManyToOne(targetEntity: Operation::class, inversedBy: 'stepOperations', fetch: 'EAGER')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Operation $operation = null;
 

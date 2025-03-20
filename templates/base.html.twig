@@ -10,6 +10,7 @@
         {% block javascripts %}
             {% block importmap %}{{ importmap('app') }}{% endblock %}
         {% endblock %}
+        <meta name="turbo-visit-control" content="reload">
     </head>
     <body>
         {% block body %}{% endblock %}

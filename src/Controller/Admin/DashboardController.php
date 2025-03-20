@@ -8,6 +8,7 @@ use App\Entity\Ingredient;
 use App\Entity\Operation;
 use App\Entity\Recipe;
 use App\Entity\Step;
+use App\Entity\Tag;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
@@ -45,5 +46,6 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkToCrud('Recettes', 'fas fa-list', Recipe::class);
         yield MenuItem::linkToCrud('Etapes', 'fas fa-list', Step::class);
         yield MenuItem::linkToCrud('Operation', 'fas fa-list', Operation::class);
+        yield MenuItem::linkToCrud('Tags', 'fas fa-list', Tag::class);
     }
 }

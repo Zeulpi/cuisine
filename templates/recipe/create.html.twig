@@ -1,37 +1,123 @@
 {% extends 'base.html.twig' %}
     
-{% block title %}Create Recipe{% endblock %}
+{% block title %}
+    {% set isEditMode = recipe is defined and recipe is not empty %}
+    {% if isEditMode %}
+        Modifier la recette : {{ recipe.recipeName }}
+    {% else %}
+        Créer une nouvelle recette
+    {% endif %}
+{% endblock %}
     
 {% block stylesheets %}
-    <pre>  
-    <link rel="stylesheet" href="{{ asset('styles/ingredient_popup.css') }}">
-    <link rel="stylesheet" href="{{ asset('styles/recipe_create.css') }}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css">
-    </pre>
+        <link rel="stylesheet" href="{{ asset('styles/ingredient_popup.css') }}" />
+        <link rel="stylesheet" href="{{ asset('styles/recipe_create.css') }}" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css">
 {% endblock %}
 
-{% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
+{% block javascripts %}
+    {{ parent() }}
 
-<div class="example-wrapper">
-    <h1>Créer une recette</h1>
+    <script type="application/json" id="recipe-data">
+        {{ { 
+            ingredients: ingredients, 
+            ingredientsPerPage: ingredientsPerPage, 
+            operations: operations,
+            imagePath: asset('images/ingredients/'),
+            existingRecipe: recipe is defined and recipe is not empty ? {
+                id: recipe.id,
+                recipeName: recipe.recipeName,
+                recipePortions: recipe.recipePortions,
+                recipeImg: recipe.recipeImg,
+                recipeIngredient: recipe.recipeIngredient|map(ing => {
+                    id: ing.id,
+                    ingredientName: ing.ingredientName,
+                    ingredientImg: ing.ingredientImg
+                })|default([]),
+                recipeQuantities: recipe.recipeQuantities|default('{}')|raw,
+                recipeOperations: stepOperations|default('{}')|raw,
+            } : null
+        }|json_encode|raw }}
+    </script>
+    <script defer>
+        document.addEventListener("DOMContentLoaded", function () {
+            let script = document.createElement("script");
+            script.src = "{{ asset('js/recipe_create.js') }}";
+            script.type = "module";
+            document.body.appendChild(script);
+        });
+        const recipeCreatePath = "{{ asset('js/recipe_create.js') }}";
+    </script>
+    {% if recipe is defined and recipe is not empty %}
+        <script src="{{ asset('js/recipe_update.js') }}" defer type="module"></script>
+        <pre>{{ dump('données de la recette', recipe) }}</pre>
+        <pre>{{ dump('etapes de la recette', steps) }}</pre>
+        <pre>{{ dump('les stepOps de la recette', stepOperations) }}</pre>
+        {# <pre>{{ recipe|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre> #}
+    {% endif %}
+{% endblock %}
+
+
+{% block body %}
+<div class="main-container">
+    <div class="page-title">
+        {% set isEditMode = recipe is defined and recipe is not empty %}
+        {% if isEditMode %}
+            <h1>Modifier la recette : {{ recipe.recipeName }}</h1>
+            {% set action = path('recipe_update', {'id': recipe.id}) %}
+        {% else %}
+            <h1>Créer une nouvelle recette</h1>
+            {% set action = path('recipe_create') %}
+        {% endif %}
+    </div>
     
-    {{ form_start(form) }}
+    <a href="{{ path('app_recipe') }}" data-turbo="false"> << back to list</a>
+    
+    {{ form_start(form, {'action': action}) }}
         <div class="recipe-title">
-            <div>
+            <div class="name-container" id="name-container">
                 {{ form_row(form.recipeName) }}
             </div>
-            <div>
+            <div class="portions-container">
                 {{ form_row(form.recipePortions) }}
+            </div>
+            <div id="tags-container">
+                {% for tag in form.recipeTags.vars.choices %}
+                    {% if tags is defined and recipe is not empty %}
+                        {% set isSelected = tag.value in tags|map(t => t.id) %}
+                    {% else %}
+                        {% set isSelected = false %}
+                    {% endif %}
+                    <button type="button" 
+                        class="tag-button {% if isSelected %}selected{% endif %}"
+                        data-id="{{ tag.value }}"
+                        data-color="{{ tag.data.tagColor }}"
+                        >
+                        {{ tag.label }}
+                    </button>
+                {% endfor %}
+            </div>
+            <!-- Champ caché pour stocker les tags sélectionnés -->
+            {{ form_widget(form.recipeTags) }}
+
+            <!-- Champ pour l'image de la recette -->
+            <div class="recipe-image d-flex justify-content-between">
+                <div class="image-input d-flex flex-column">
+                    <h3>Image de la recette</h3>
+                    {{ form_widget(form.image) }}
+                    {# <input type="hidden" name="remove_image" id="remove_image" value="0"> #}
+                </div>
+                <div class="image-preview" class="d-flex" id="image-preview">
+                    {% set imgSrc = isEditMode and recipe is defined and recipe.recipeImg is not empty ? asset('images/recipes/' ~ recipe.recipeImg) : '' %}
+                    <img src="{{ imgSrc }}" alt="Image de la recette" id="image-preview-img">
+                    <button type="button" class="btn btn-danger" id="remove-image-button">X</button>
+                </div>
             </div>
         </div>
         
         <div class="recipe-ingredients">
             <h3>Ingredients</h3>
-            <button id="add-ingredient-button" type="button">Add Ingredient</button>
+            <button id="add-ingredient-button" type="button" class="btn btn-success">Add Ingredient</button>
             <!-- Pop-up pour choisir l'ingrédient -->
             <div id="ingredient-popup" class="popup" style="display: none;">
                 <div class="popup-content">
@@ -40,8 +126,8 @@
                     <div id="ingredients-list" class="ingredients-list">
                         <div id="ingredients-list" class="ingredients-list">
                             {% for ingredient in ingredients %}
-                                <div class="ingredient-card" data-id="{{ ingredient.id }}" data-image="{{ ingredient.image }}" data-name="{{ ingredient.ingredientName }}">
-                                    <img src="{{ asset('images/ingredients/' ~ ingredient.image) }}" alt="{{ ingredient.ingredientName }}" style="width: 100px;">
+                                <div class="ingredient-card" data-id="{{ ingredient.id }}" data-image="{{ ingredient.ingredientImg }}" data-name="{{ ingredient.ingredientName }}">
+                                    <img src="{{ asset('images/ingredients/' ~ ingredient.ingredientImg) }}" alt="{{ ingredient.ingredientName }}" style="width: 100px;">
                                     <p>{{ ingredient.ingredientName }}</p>
                                 </div>
                             {% else %}
@@ -65,48 +151,8 @@
         
         
         <div class="recipe-steps">
-            <h3>Steps</h3>
+            <h3>Etapes</h3>
             <div id="steps" data-prototype="{{ form_widget(form.recipeSteps.vars.prototype)|e('html_attr') }}">
-                {% for step in form.recipeSteps %}
-                    <div class="step-item">
-                        <!-- Div contenteditable pour l'utilisateur -->
-                        <div class="step-frame d-flex flex-row justify-content-between">
-                            <div class="step-operation w-50">
-                            </div>
-                            <div class="step-description w-50" contenteditable="true">
-                                {{ step.stepText.vars.value|default('') }}
-                            </div>
-                        </div>
-
-                        <!-- Champ pour le temps de l'étape -->
-                        <div class="step-time">
-                            {{ form_widget(step.stepTime) }} <!-- Champ stepTime -->
-                        </div>
-
-                        <!-- Champ pour l'unité de temps -->
-                        <div class="step-time-unit">
-                            {{ form_widget(step.stepTimeUnit) }} <!-- Champ stepTimeUnit -->
-                        </div>
-
-                        <!-- Champ pour simultanéité -->
-                        <div class="step-simult">
-                            {{ form_widget(step.stepSimult) }} <!-- Champ stepSimult -->
-                        </div>
-
-                        <button type="button" class="remove-step">Remove</button>
-
-                        <!-- Conteneur pour les opérations de cette étape -->
-                        <div class="operations-container">
-                            <h4>Operations sur les Ingrédients</h4>
-                            <button class="add-operation-button" type="button">Ajouter une opération</button>
-
-                            <!-- Conteneur des opérations ajoutées -->
-                            <div class="added-operations">
-                                <input type="hidden" class="selected-operations" name="selected-operations" value="[]">
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
                 <input type="hidden" name="all-selected-operations" id="all-selected-operations" value="[]">
                 <!-- Pop-up pour choisir une opération -->
                 <div class="operation-popup popup" style="display: none;" id="operation-popup">
@@ -117,7 +163,7 @@
                         <select class="operation-select">
                             <option value="">Choisissez une opération</option>
                             {% for operation in operations %}
-                                <option value="{{ operation.id }}">{{ operation.name }}</option>
+                                <option value="{{ operation.id }}">{{ operation.operationName }}</option>
                             {% endfor %}
                         </select>
 
@@ -132,19 +178,93 @@
                         <!-- Description du résultat -->
                         <input type="text" class="result-description" placeholder="(ex : Oignons ciselés)">
 
-                        <button class="save-operation-button" type="button">Ajouter</button>
+                        <button class="save-operation-button" type="button">Sauvegarder</button>
                         <button class="close-operation-popup" type="button">Fermer</button>
                     </div>
                 </div>
+                {% for step in form.recipeSteps %}
+                    <div class="step-item" data-id={{ step.vars.data.id }} data-number={{ step.vars.data.stepNumber }}>
+                        {% if step.vars.data.id is defined %}
+                            <input type="hidden" name="recipe[recipeSteps][{{ loop.index0 }}][id]" value={{ step.vars.data.id + 0}}>
+                        {% endif %}
+                        {% if step.vars.data.stepNumber is defined %}
+                            <input type="hidden" name="recipe[recipeSteps][{{ loop.index0 }}][stepNumber]" value={{ step.vars.data.stepNumber + 0}}>
+                        {% endif %}
+                        <div class="step-header">
+                            <div class="step-indicator">
+                                Étape {{ loop.index0 + 1 }}/{{ form.recipeSteps|length }}
+                            </div>
+                            <div class="step-remove">
+                                <button type="button" class="remove-step btn btn-danger">X</button>
+                            </div>
+                        </div>
+                        
+                        <div id="recipe_recipeSteps_{{ loop.index0 }}" class="step-time-container">
+                            <!-- Champ caché pour le texte de l'étape -->
+                            <input type="hidden" id="recipe_recipeSteps_{{ loop.index0 }}_stepText" name="recipe[recipeSteps][{{ loop.index0 }}][stepText]" class="step-description-hidden">
+
+                            <!-- Conteneur de la durée -->
+                            <div class="step-time-frame">
+                                <label class="step-time-label required" for="recipe_recipeSteps_{{ loop.index0 }}_stepTime">Durée de l'étape</label>
+                                <input type="number"
+                                    id="recipe_recipeSteps_{{ loop.index0 }}_stepTime"
+                                    name="recipe[recipeSteps][{{ loop.index0 }}][stepTime]"
+                                    required="required"
+                                    min="1"
+                                    step="1"
+                                    class="step-time"
+                                    value="{{ step.stepTime.vars.value|default(1) }}">
+                            </div>
+
+                            <!-- Conteneur de l'unité de temps -->
+                            <div class="step-time-unit-frame">
+                                <select id="recipe_recipeSteps_{{ loop.index0 }}_stepTimeUnit"
+                                    name="recipe[recipeSteps][{{ loop.index0 }}][stepTimeUnit]"
+                                    class="step-time-unit">
+                                    <option value="minutes" {{ step.stepTimeUnit.vars.value == 'minutes' ? 'selected' : '' }}>Minutes</option>
+                                    <option value="secondes" {{ step.stepTimeUnit.vars.value == 'secondes' ? 'selected' : '' }}>Secondes</option>
+                                    <option value="heures" {{ step.stepTimeUnit.vars.value == 'heures' ? 'selected' : '' }}>Heures</option>
+                                </select>
+                            </div>
+
+                            <!-- Conteneur de l'étape simultanée -->
+                            <div class="step-simult-frame" style="display: none;">
+                                <label class="step-simult-label" for="recipe_recipeSteps_{{ loop.index0 }}_stepSimult">Étape simultanée ?</label>
+                                <input type="checkbox" id="recipe_recipeSteps_{{ loop.index0 }}_stepSimult"
+                                name="recipe[recipeSteps][{{ loop.index0 }}][stepSimult]"
+                                class="step-simult"
+                                {% if step.vars.value.stepSimult %}checked{% endif %}>
+                            </div>
+
+                        </div>
+                        
+                        <hr class="step-time-hr"/>
+                        <h5>Opérations sur les Ingrédients et descriptions</h5>
+                        <div class="step-info-frame d-flex flex-row justify-content-between">
+                            <div class="w-50 add-operation-frame"><button class="add-operation-button btn btn-primary" type="button">Ajouter une opération</button></div>
+                            <div class="w-50 add-operation-desc">Ajoutez ici la description de l'étape.</div>
+                        </div>
+                        <!-- Div contenteditable pour l'utilisateur -->
+                        <div class="step-frame d-flex flex-row justify-content-between">
+                            <div class="step-operation w-50">
+                            </div>
+                            <div class="step-description w-50" contenteditable="true">
+                                {{ step.stepText.vars.value|default('') }}
+                            </div>
+                        </div>
+                        <div class="operations-container">
+                            <div class="added-operations">
+                                <input type="hidden" class="selected-operations" name="selected-operations" value="[]">
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
             </div>
-        </div>
-        
-        <div class="recipe-image">
-            <h3>Image de la recette</h3>
-            {{ form_widget(form.image) }}
+            <button id="add-step-button" type="button" class="btn btn-success">Add Step</button>
         </div>
         
         <button type="submit">Save Recipe</button>
+    {{ form_widget(form.recipeSteps, {'attr': {'style': 'display:none; visibility: hidden'}}) }}
     {{ form_end(form) }}
 
     <!-- Popup de confirmation -->
@@ -156,1003 +276,5 @@
             <button id="cancel-delete" class="btn btn-secondary">Annuler</button>
         </div>
     </div>
-
-    <a href="{{ path('app_recipe') }}">back to list</a>
 </div>
-
-<script type="text/javascript">
-document.addEventListener('DOMContentLoaded', () => {
-    const addIngredientButton = document.getElementById('add-ingredient-button');
-    const ingredientPopup = document.getElementById('ingredient-popup');
-    const closePopupButton = document.getElementById('close-popup');
-    const ingredientsContainer = document.getElementById('ingredients-container');
-    const stepsContainer = document.getElementById('steps');
-    const addStepButton = document.createElement('button');
-    const addOperationButton = document.getElementById('add-operation-button');
-    const operationPopup = document.getElementById('operation-popup');
-    const confirmationPopup = document.getElementById('confirmation-popup');
-    const closeOperationPopupButton = document.getElementById('close-operation-popup');
-    const saveOperationButton = document.getElementById('save-operation-button');
-    const operationsContainer = document.getElementById('operations-container');
-    const selectedOperationsField = document.getElementById('selected-operations');
-    const ingredientsList = document.getElementById('ingredients-list');
-    const prevPageButton = document.getElementById('prev-page');
-    const nextPageButton = document.getElementById('next-page');
-    const currentPageSpan = document.getElementById('current-page');
-    const ingredientSearch = document.getElementById('ingredient-search');
-    const currentPageInfo = document.getElementById('current-page-info');
-    let activeStepItem = null;
-    let tempID = -1;
-
-    addStepButton.textContent = 'Add Step';
-    addStepButton.type = 'button';
-    stepsContainer.append(addStepButton);
-
-    const ingredients = {{ ingredients|json_encode|raw }}; // Les ingrédients passés depuis Symfony
-    const itemsPerPage = {{ingredientsPerPage}}; // Nombre d'ingrédients par page
-    let currentPage = 1; // Page actuelle
-    const totalPages = Math.ceil(ingredients.length / itemsPerPage); // Nombre total de pages
-    let filteredIngredients = [...ingredients]; // Initialement, tous les ingrédients sont visibles
-
-    const operations = {{ operations|json_encode|raw }};
-
-    // Récupérer les ingrédients déjà ajoutés à la recette
-    const selectedIngredientsField = document.getElementById('recipe_selectedIngredients');
-    let selectedIngredients = JSON.parse(selectedIngredientsField.value || '[]');
-
-    // Récupérer les ingrédients intermédiaires
-    const resultIngredientsField = document.getElementById('result-ingredients');
-    let resultIngredients = JSON.parse(resultIngredientsField.value || '[]');
-
-    let stepIndex = stepsContainer.querySelectorAll('.step-item').length;
-    
-    // Mettre à jour les options dans la liste des ingrédients du popup opérations
-    function updateIngredientOptions(popup) {
-        const ingredientSelect = popup.querySelector('.ingredient-select');
-        const stepItems = stepsContainer.querySelectorAll('.step-item');
-        
-        ingredientSelect.innerHTML = '<option value="">Choisissez un ingrédient</option>'; // Réinitialiser
-
-        // Récupérer l'index de l'étape actuelle
-        const currentStepIndex = parseInt(activeStepItem.querySelector('[id^="recipe_recipeSteps_"]').id.split('_').pop());
-
-        // Récupérer les ingrédients sélectionnés avec leurs quantités
-        const selectedIngredientsField = document.getElementById('recipe_selectedIngredients');
-        const selectedIngredients = JSON.parse(selectedIngredientsField?.value || '[]');
-
-        //Recupérer les ingrédients intermédiaires
-        const resultIngredientsField = document.getElementById('result-ingredients');
-        const resultIngredients = JSON.parse(resultIngredientsField?.value || '[]');
-
-        //Ajout des ingrédients de la recette a la selection
-        selectedIngredients.forEach(selectedIngredient => {
-            const ingredient = ingredients.find(ing => ing.id === parseInt(selectedIngredient.ingredientId));
-
-            if (ingredient) {
-                // Ajouter l'ingrédient au menu déroulant
-                const option = document.createElement('option');
-                option.value = ingredient.id;
-                option.textContent = ingredient.ingredientName;
-                option.classList.add('ingredient-option');
-                ingredientSelect.appendChild(option);
-            }
-        });
-
-        // Récupérer les résultats d'opération AVANT ou À l'étape actuelle
-        let validResultIds = new Set();
-        stepItems.forEach(step => {
-            const stepIndex = parseInt(step.querySelector('[id^="recipe_recipeSteps_"]').id.split('_').pop());
-            
-            if (stepIndex <= currentStepIndex) {
-                const selectedOperationsField = step.querySelector('.selected-operations');
-                const selectedOperations = JSON.parse(selectedOperationsField?.value || '[]');
-
-                selectedOperations.forEach(operation => {
-                    if (operation.operationResult !== null) {
-                        validResultIds.add(operation.operationResult);
-                    }
-                });
-            }
-        });
-
-        // Vérifier si nous sommes en mode édition
-        const editingOperationId = popup.getAttribute('data-editing-operation-id');
-        console.log(editingOperationId);
-        let currentResultId = null;
-        
-        if (editingOperationId) {
-            const operationItem = document.getElementById(editingOperationId);
-            const resultDescriptionElement = operationItem.querySelector('span[id^="result_"]');
-            if (resultDescriptionElement) {
-                currentResultId = parseInt(resultDescriptionElement.id.split('_')[1]);
-            }
-        }
-
-        // Ajout des ingrédients intermédiaires valides, excluant le résultat actuel de l'opération modifiée
-        resultIngredients.forEach(resultIngredient => {
-            // Ajouter l'ingrédient si il est valide et ce n'est pas le résultat de l'opération modifiée
-            if (validResultIds.has(resultIngredient.resultId) && resultIngredient.resultId !== currentResultId) {
-                const option = document.createElement('option');
-                option.value = resultIngredient.resultId;
-                option.textContent = resultIngredient.resultName;
-                option.classList.add('result-ingredient-option');
-                ingredientSelect.appendChild(option);
-            }
-        });
-    }
-
-    //Fonction pour mettre a jour les operations dépendantes apres edition d'une opération
-    function updateOperationResults(newResultId, newResultName) {
-        const stepItems = stepsContainer.querySelectorAll('.step-item');
-        stepItems.forEach(step => {
-            const operationItems = step.querySelectorAll('.step-frame .operation-item');
-
-            operationItems.forEach(operationItem => {
-                // Récupérer les éléments de l'opération et de l'ingrédient
-                const operationElement = operationItem.querySelector('.operation');
-                const ingredientElement = operationItem.querySelector('.ingredient');
-
-                // Vérifier si l'ingrédient ou l'opération est lié au résultat que nous avons mis à jour
-                if (ingredientElement && parseInt(ingredientElement.id.split('_')[2]) === newResultId) {
-                    // Si l'ingrédient utilise le résultat mis à jour, on change le texte de l'ingrédient
-                    ingredientElement.textContent = newResultName;
-                }
-            });
-        });
-    }
-
-    // Afficher le popup de confirmation
-    function showConfirmationPopup(message, callback) {
-        const messageElement = document.getElementById('confirmation-message');
-        const confirmButton = document.getElementById('confirm-delete');
-        const cancelButton = document.getElementById('cancel-delete');
-
-        messageElement.textContent = message; // Insérer le message personnalisé
-        confirmationPopup.style.display = 'block'; // Afficher le popup
-
-        // Lorsque l'utilisateur clique sur "Confirmer"
-        confirmButton.onclick = function() {
-            callback(true);  // Exécuter l'action (par exemple, supprimer)
-            confirmationPopup.style.display = 'none';  // Fermer le popup
-        };
-
-        // Lorsque l'utilisateur clique sur "Annuler"
-        cancelButton.onclick = function() {
-            callback(false); // Ne rien faire
-            confirmationPopup.style.display = 'none';  // Fermer le popup
-        };
-    }
-
-    function sanitizeInput(input) {
-        // Créer un élément temporaire pour traiter le HTML
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = input;
-
-        // Supprimer les balises indésirables
-        const allowedTags = ['br', 'b', 'i', 'u', 'div', 'span', 'p']; // Ajouter d'autres balises autorisées si nécessaire
-        tempDiv.querySelectorAll('*').forEach(node => {
-            if (!allowedTags.includes(node.tagName.toLowerCase())) {
-                node.replaceWith(document.createTextNode(node.textContent));
-            }
-        });
-
-        return tempDiv.innerHTML;
-    }
-    // Fonction pour synchroniser le contenu de "step-description" avec le champ caché
-    function syncStepDescription(stepItem, description) {
-        const hiddenField = stepItem.querySelector('input[name*="[stepText]"]');
-        const sanitizedValue = sanitizeInput(description);
-        if (hiddenField) {
-            hiddenField.value += sanitizedValue; // Sauvegarder uniquement la description
-        }
-    }
-    // Fonction pour ajouter les ingrédients intermédiaires au champ caché
-    function addResultIngredient(resultDescription) {
-        const resultIngredientsField = document.getElementById('result-ingredients');
-        const resultIngredients = JSON.parse(resultIngredientsField.value || '[]');
-        const newResultId = tempID;
-
-        // Ajouter result au tableau des ingrédients intermédiaires
-        resultIngredients.push({ resultId: newResultId, resultName: resultDescription }); // Ajout de l'Id négatif
-        tempID--; // Décrémentation pour les prochains ID négatifs
-
-        // Mettre à jour le champ caché avec la liste des ingrédients intermédiaires
-        resultIngredientsField.value = JSON.stringify(resultIngredients);
-
-        return newResultId;
-    }
-
-    // Fonction pour masquer le champ 'stepSimult' pour l'étape 1
-    function hideStepSimultForFirstStep() {
-        const stepItems = stepsContainer.querySelectorAll('.step-item');
-        stepItems.forEach((stepItem, index) => {
-            const stepSimult = stepItem.querySelector('input[name*="[stepSimult]"]');
-            if (index === 0 && stepSimult) {
-                stepSimult.closest('div').style.display = 'none'; // Masque le champ pour l'étape 1
-            } else if (stepSimult) {
-                stepSimult.closest('div').style.display = ''; // Affiche le champ pour les autres étapes
-            }
-        });
-    }
-    
-    // Fonction pour supprimer une opération
-    function removeOperation(operationItem) {
-        if (!operationItem) {
-            console.error("Erreur : Aucune opération fournie.");
-            return;
-        }
-        const stepItem = operationItem.closest('.step-item'); // Récupérer l'étape concernée
-        const operationsContainer = stepItem.querySelector('.added-operations'); // Conteneur des opérations
-        const operationDiv = operationItem.querySelector('.operation');
-        const selectedOperationsField = operationsContainer.querySelector('.selected-operations'); // Champ caché
-
-        if (!stepItem || !operationsContainer || !selectedOperationsField) {
-            console.error("Erreur : Élément manquant.");
-            return;
-        }
-
-        // Extraire operationId et ingredientId
-        const operationId = parseInt(operationDiv.id.split('_').pop(), 10);
-        const ingredientElement = operationItem.querySelector('.ingredient'); 
-        const ingredientId = ingredientElement ? parseInt(ingredientElement.id.split('_').pop(), 10) : null;
-
-        if (isNaN(operationId) || isNaN(ingredientId)) {
-            console.error("Erreur : ID invalide.");
-            return;
-        }
-
-        // Récupérer la liste des opérations de l'étape en cours
-        let stepOperations = JSON.parse(selectedOperationsField.value || '[]');
-
-        // Trouver le resultId avant suppression
-        const resultId = stepOperations.find(op => op.operationId === operationId && op.ingredientId === ingredientId)?.operationResult;
-
-        // Supprimer visuellement l'opération
-        operationItem.remove();
-
-        // Supprimer l'opération du tableau
-        stepOperations = stepOperations.filter(op => !(op.operationId === operationId && op.ingredientId === ingredientId));
-
-        // Mettre à jour le champ caché des opérations
-        selectedOperationsField.value = stepOperations.length > 0 ? JSON.stringify(stepOperations) : '';
-
-        // Si un résultat intermédiaire est supprimé, supprimer toutes les opérations qui l’utilisent
-        if (resultId !== null && resultId < 0) {
-            removeDependentOperations(resultId);
-        }
-        // Mettre à jour la liste des ingrédients intermédiaires
-        cleanupResultIngredients();
-    }
-    // Fonction pour supprimer les opérations dépendantes d'un ingrédient supprimé
-    function removeDependentOperations(deletedIngredientId) {
-        const stepItems = document.querySelectorAll('.step-item'); // Sélectionner tous les step-items
-
-        stepItems.forEach((stepItem, stepIndex) => {
-            const operationsContainer = stepItem.querySelector('.added-operations');
-            const selectedOperationsField = operationsContainer.querySelector('.selected-operations');
-            let stepOperations = JSON.parse(selectedOperationsField.value || '[]');  // Récupérer les opérations de l'étape
-
-            // Trouver les opérations qui dépendent de l'ingrédient supprimé
-            const dependentOperations = stepOperations.filter(op => op.ingredientId === deletedIngredientId);
-
-            dependentOperations.forEach((op) => {
-                const operationId = op.operationId;
-
-                // Sélectionner toutes les opérations ayant le même operationId dans cette étape
-                const stepIdMatch = stepItem.querySelector('[id^="recipe_recipeSteps_"]')?.id.match(/recipe_recipeSteps_(\d+)/);
-                const stepId = stepIdMatch ? stepIdMatch[1] : null;
-                const operationElements = stepItem.querySelectorAll(`#operation_${stepId}_${operationId}`);
-                
-                operationElements.forEach((operationElement) => {
-                    // Vérifier si l'ingrédient associé à l'opération est le bon
-                    const ingredientElement = operationElement.closest('.operation-item').querySelector('.ingredient');
-                    const operationIngredientId = ingredientElement ? parseInt(ingredientElement.id.split('_').pop(), 10) : null;
-
-                    // Si l'opération utilise l'ingrédient supprimé, la supprimer
-                    if (operationIngredientId === deletedIngredientId) {
-                        operationElement.closest('.operation-item').remove();  // Supprimer visuellement l'opération
-                        // Appeler removeOperation pour mettre à jour les données et supprimer l'opération
-                        document.body.contains(operationElement) ? removeOperation(operationElement) : null;
-                    }
-                });
-            });
-
-            // Mettre à jour le champ caché avec les opérations restantes
-            stepOperations = stepOperations.filter(op => !dependentOperations.includes(op)); // Supprimer les opérations dépendantes
-            selectedOperationsField.value = JSON.stringify(stepOperations);  // Mettre à jour le champ caché
-        });
-    }
-    // Fonction pour nettoyer les ingrédients intermédiaires non utilisés
-    function cleanupResultIngredients() {
-        const resultIngredientsField = document.getElementById('result-ingredients');
-        let resultIngredients = JSON.parse(resultIngredientsField.value || '[]');
-
-        // Récupérer tous les `selected-operations` pour voir quels resultIds sont encore utilisés
-        const usedResultIds = new Set();
-        document.querySelectorAll('.selected-operations').forEach(field => {
-            const stepOperations = JSON.parse(field.value || '[]');
-            stepOperations.forEach(op => {
-                if (op.operationResult && op.operationResult < 0) {
-                    usedResultIds.add(op.operationResult);
-                }
-            });
-        });
-
-        // Filtrer pour ne garder que les resultIngredients encore utilisés
-        resultIngredients = resultIngredients.filter(result => usedResultIds.has(result.resultId));
-
-        // Mettre à jour le champ caché
-        resultIngredientsField.value = JSON.stringify(resultIngredients);
-    }
-
-    // Modifier la liste des ingrédients par un champ de recherche
-    ingredientSearch.addEventListener('input', (e) => {
-        const searchValue = e.target.value.toLowerCase();
-        const filteredIngredients = ingredients.filter(ingredient => ingredient.ingredientName.toLowerCase().includes(searchValue));
-        displayPage(1, filteredIngredients);
-    });
-
-    // Fonction pour afficher une page d'ingrédients dans le popup
-    function displayPage(page, ingredientSubset) {
-        const startIndex = (page - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-
-        // Sous-ensemble des ingrédients à afficher
-        const ingredientsToDisplay = ingredientSubset.slice(startIndex, endIndex);
-
-        // Mise à jour du conteneur d'ingrédients
-        ingredientsList.innerHTML = ingredientsToDisplay
-            .map(
-                ingredient => `
-                <div class="ingredient-card" data-id="${ingredient.id}" data-name="${ingredient.ingredientName}" data-image="${ingredient.image}">
-                    <img src="/images/ingredients/${ingredient.image}" alt="${ingredient.ingredientName}" style="width: 100px;">
-                    <p>${ingredient.ingredientName}</p>
-                </div>
-            `
-            )
-            .join('');
-
-        // Mise à jour de l'information de pagination
-        const totalPages = Math.ceil(ingredientSubset.length / itemsPerPage);
-        currentPageInfo.textContent = `Page ${page} / ${totalPages}`;
-        currentPage = page;
-
-        // Gestion des boutons de navigation
-        updatePaginationButtons(totalPages);
-        disableSelectedIngredients();
-    }
-
-    // Fonction pour mettre à jour les boutons "Précédent" et "Suivant" dans le popup ingrédients
-    function updatePaginationButtons(totalPages) {
-        const prevButton = document.getElementById('prev-page');
-        const nextButton = document.getElementById('next-page');
-
-        prevButton.disabled = currentPage <= 1;
-        nextButton.disabled = currentPage >= totalPages;
-
-        prevButton.onclick = () => {
-            if (currentPage > 1) {
-                displayPage(currentPage - 1, filteredIngredients);
-            }
-        };
-
-        nextButton.onclick = () => {
-            if (currentPage < totalPages) {
-                displayPage(currentPage + 1, filteredIngredients);
-            }
-        };
-    }
-    // Gérer la recherche d'ingrédients dans le popup ingrédients
-    ingredientSearch.addEventListener('input', (e) => {
-        const searchValue = e.target.value.toLowerCase();
-        filteredIngredients = ingredients.filter(ingredient =>
-            ingredient.ingredientName.toLowerCase().includes(searchValue)
-        );
-
-        // Réinitialiser à la première page des résultats filtrés
-        displayPage(1, filteredIngredients);
-    });
-
-    // Ouvrir le popup ingrédients
-    addIngredientButton.addEventListener('click', function() {
-        ingredientPopup.style.display = 'block';
-        // displayPage(1, filteredIngredients);
-    });
-
-    // Fermer le popup ingrédients
-    closePopupButton.addEventListener('click', function () {
-        ingredientPopup.style.display = 'none';
-    });
-    // Initialisation
-    displayPage(1, filteredIngredients);
-
-    // Désactiver les ingrédients déjà ajoutés
-    function disableSelectedIngredients() {
-        const ingredientCards = document.querySelectorAll('.ingredient-card');
-        ingredientCards.forEach(card => {
-            const ingredientId = card.getAttribute('data-id');
-            if (selectedIngredients.some(item => item.ingredientId == ingredientId)) { // Comparaison avec ingredientId
-                card.classList.add('disabled'); // Ajouter une classe 'disabled'
-                const button = card.querySelector('button'); 
-                if (button) {
-                    button.disabled = true; // Désactiver le bouton
-                }
-            } else {
-                card.classList.remove('disabled'); // Retirer la classe 'disabled'
-                const button = card.querySelector('button'); 
-                if (button) {
-                    button.disabled = false; // Activer le bouton
-                }
-            }
-        });
-    }
-
-    // Sélectionner un ingrédient
-    document.getElementById('ingredients-list').addEventListener('click', (e) => {
-        if (e.target && e.target.closest('.ingredient-card')) {
-            const selectedCard = e.target.closest('.ingredient-card');
-            const ingredientId = parseInt(selectedCard.getAttribute('data-id'), 10);
-            const ingredientImage = selectedCard.getAttribute('data-image');
-            const ingredientName = selectedCard.getAttribute('data-name');
-
-            // Ajouter l'ingrédient sélectionné à la recette
-            const ingredientDiv = document.createElement('div');
-            ingredientDiv.classList.add('ingredient-item');
-            ingredientDiv.setAttribute('data-id', ingredientId); 
-
-            ingredientDiv.innerHTML = `
-                <img src="/images/ingredients/${ingredientImage}" alt="${ingredientName}" style="width: 50px;">
-                <span>${ingredientName}</span>
-                <input type="number" class="ingredient-quantity" placeholder="Quantity" min="0" step="0.1" value="1">
-                <input type="text" class="ingredient-unit" placeholder="Unit (e.g. kg)" value=""/>
-                <button type="button" class="remove-ingredient">Remove</button>
-            `;
-            ingredientsContainer.appendChild(ingredientDiv);
-
-            // Ajouter l'ID au tableau des ingrédients sélectionnés
-            selectedIngredients.push({ ingredientId, quantity: 1 }); // Valeur par défaut pour la quantité
-
-            // Mettre à jour le champ caché avec la liste des ingrédients sélectionnés
-            selectedIngredientsField.value = JSON.stringify(selectedIngredients);
-
-            // Désactiver les ingrédients déjà sélectionnés
-            disableSelectedIngredients(); 
-
-            // Fermer le pop-up après sélection
-            ingredientPopup.style.display = 'none';
-        }
-    });
-
-    // Mise à jour des quantités par ingrédient
-    ingredientsContainer.addEventListener('input', (e) => {
-        const ingredientDiv = e.target.closest('.ingredient-item');
-        const ingredientId = parseInt(ingredientDiv.getAttribute('data-id')); // Convertir en entier
-        const quantityInput = ingredientDiv.querySelector('.ingredient-quantity');
-        const quantity = parseFloat(quantityInput.value); // Convertir en float
-        const unitInput = ingredientDiv.querySelector('.ingredient-unit');
-        const unit = unitInput.value.trim(); // Récupérer l'unité saisie
-
-        // Si l'élément modifié est la quantité
-        if (e.target && e.target.classList.contains('ingredient-quantity')) {
-
-            if (isNaN(quantity) || quantity <= 0) {
-                alert('Please enter a valid quantity.');
-                e.target.value = 1; // Valeur par défaut si la quantité n'est pas valide
-                return;
-            }
-
-            // Mettre à jour la quantité dans `selectedIngredients`
-            const selectedIngredientsField = document.getElementById('recipe_selectedIngredients');
-            let selectedIngredients = JSON.parse(selectedIngredientsField.value || '[]');
-
-            // Trouver l'ingrédient et mettre à jour sa quantité
-            const ingredientIndex = selectedIngredients.findIndex(ing => parseInt(ing.ingredientId, 10) === parseInt(ingredientId, 10)); // Conversion explicite
-
-            if (ingredientIndex !== -1) {
-                selectedIngredients[ingredientIndex].quantity = quantity;
-                selectedIngredients[ingredientIndex].unit = unit; // Ajouter l'unité
-                selectedIngredientsField.value = JSON.stringify(selectedIngredients); // Mise à jour du champ caché
-            }
-        }
-        // Si l'élément modifié est l'unité
-        if (e.target && e.target.classList.contains('ingredient-unit')) {
-
-            // Mettre à jour l'unité dans `selectedIngredients`
-            const selectedIngredientsField = document.getElementById('recipe_selectedIngredients');
-            let selectedIngredients = JSON.parse(selectedIngredientsField.value || '[]');
-
-            // Trouver l'ingrédient et mettre à jour son unité
-            const ingredientIndex = selectedIngredients.findIndex(ing => parseInt(ing.ingredientId, 10) === ingredientId); // Conversion explicite
-            if (ingredientIndex !== -1) {
-                selectedIngredients[ingredientIndex].quantity = quantity;
-                selectedIngredients[ingredientIndex].unit = unit; // Mettre à jour l'unité
-                selectedIngredientsField.value = JSON.stringify(selectedIngredients); // Mise à jour du champ caché
-            }
-        }
-    });
-
-    // Gestion de la suppression des ingrédients
-    ingredientsContainer.addEventListener('click', (e) => {
-        if (e.target && e.target.classList.contains('remove-ingredient')) {
-            const ingredientDiv = e.target.closest('.ingredient-item');
-            const ingredientId = parseInt(ingredientDiv.getAttribute('data-id')); // Récupérer l'ID de l'ingrédient
-
-            
-            // Afficher le popup de confirmation avant suppression
-            showConfirmationPopup("Si vous supprimez cet ingrédient, toutes les opérations qui en dépendent seront également supprimées. Confirmez-vous la suppression ?", (confirm) => {
-                if (confirm) {
-                    // Supprimer l'élément visuel
-                    ingredientDiv.remove();
-
-                    // Mettre à jour le champ caché
-                    selectedIngredients = selectedIngredients.filter(ing => ing.ingredientId !== ingredientId);
-                    selectedIngredientsField.value = JSON.stringify(selectedIngredients);
-
-                    // Supprimer les opérations contenant cet ingrédient
-                    document.querySelectorAll('.operation-item').forEach(operationItem => {
-                        const ingredientElement = operationItem.querySelector('.ingredient');
-
-                        if (ingredientElement) {
-                            const extractedId = parseInt(ingredientElement.id.split('_').pop(), 10); // Récupérer l'ingredientId
-                            if (extractedId === ingredientId) {
-                                if (document.body.contains(operationItem)) {
-                                    removeOperation(operationItem); // Supprimer avec la fonction existante
-                                }
-                            }
-                        }
-                    });
-
-                    // Réactiver les ingrédients disponibles
-                    disableSelectedIngredients();
-                } else {
-                    console.log("Suppression annulée");
-                }
-            });
-        }
-    });
-
-    // Appeler la fonction au chargement de la page pour masquer 'stepSimult' pour la première étape
-    hideStepSimultForFirstStep();
-    
-    // Ajouter une étape
-    addStepButton.addEventListener('click', (e) => {
-        e.preventDefault();
-
-        const prototype = stepsContainer.dataset.prototype;
-        const newForm = prototype.replace(/__name__/g, stepIndex + 1);
-
-        const newStepElement = document.createElement('div');
-        newStepElement.classList.add('step-item');
-
-        // Création de la structure HTML de la nouvelle étape avec un div contenteditable
-        newStepElement.innerHTML = `
-            ${newForm}
-            <div><span>Ajoutez ici la description de l'étape. (ou ajoutez des operations sur les ingrédients)</p></div>
-            <div class="step-frame d-flex flex-row justify-content-between">
-                <div class="step-operation w-50"></div>
-                <div class="step-description w-50" contenteditable="true" id="step-description-${stepIndex}"></div>
-            </div>
-            <button type="button" class="remove-step">Remove</button>
-            <div class="operations-container">
-                <h4>Opérations sur les Ingrédients</h4>
-                <button class="add-operation-button" type="button">Ajouter une opération</button>
-                <div class="added-operations">
-                    <input type="hidden" class="selected-operations" name="selected-operations" value="[]">
-                </div>
-            </div>
-        `;
-
-        stepsContainer.appendChild(newStepElement);
-        stepIndex++;
-
-        hideStepSimultForFirstStep();
-    });
-
-    // Supprimer une étape
-    stepsContainer.addEventListener('click', (e) => {
-        if (e.target && e.target.classList.contains('remove-step')) {
-            const operationsContainer = e.target.closest('.step-item').querySelector('.step-frame .step-operation');
-            const operationItems = operationsContainer.querySelectorAll('.operation-item');
-            
-            // Afficher le popup de confirmation avant suppression
-            showConfirmationPopup("Si vous supprimez cette étape, toutes les opérations qui en dépendent seront également supprimées. Confirmez-vous la suppression ?", (confirm) => {
-                if (confirm) {
-                    operationItems.forEach((operationElement) => {
-                    // Appeler la fonction removeOperation pour chaque operation-item si il existe encore
-                    document.body.contains(operationElement) ? removeOperation(operationElement) : null;
-                    });
-                    e.target.closest('.step-item').remove();
-
-                    // Après suppression, réappliquer la logique pour vérifier les étapes restantes
-                    hideStepSimultForFirstStep();
-                } else {
-                    console.log("Suppression annulée");
-                }
-            });
-        }
-    });
-
-    // Gérer les opérations sur les ingrédients
-    stepsContainer.addEventListener('click', (e) => {
-
-        // Ajouter une opération
-        if (e.target && e.target.classList.contains('add-operation-button')) {
-            activeStepItem = e.target.closest('.step-item');
-            // Réinitialiser les champs du popup à chaque ouverture
-            operationPopup.querySelector('.operation-select').value = ''; // Réinitialiser le champ opération
-            operationPopup.querySelector('.ingredient-select').value = ''; // Réinitialiser le champ ingrédient
-            operationPopup.querySelector('.result-description').value = ''; // Réinitialiser la description
-            updateIngredientOptions(operationPopup);
-            operationPopup.style.display = 'block';
-        }
-
-        // Fermer le popup d'opération
-        if (e.target && e.target.classList.contains('close-operation-popup')) {
-            operationPopup.setAttribute('data-editing-operation-id', '');
-            operationPopup.style.display = 'none';
-        }
-
-        // Sauvegarder une opération dans la description et le champ caché
-        if (e.target && e.target.classList.contains('save-operation-button')) {
-            const operationSelect = operationPopup.querySelector('.operation-select');
-            const ingredientSelect = operationPopup.querySelector('.ingredient-select');
-            const descriptionSelect = operationPopup.querySelector('.result-description');
-            const stepOp = activeStepItem.querySelector('.step-frame .step-operation');
-            const operationsContainer = activeStepItem.querySelector('.added-operations');
-
-            const operationId = operationSelect.value;
-            const operationName = operationSelect.options[operationSelect.selectedIndex]?.text;
-            const ingredientId = ingredientSelect.value;
-            const ingredientName = ingredientSelect.options[ingredientSelect.selectedIndex]?.text;
-            const resultDescription = descriptionSelect.value;
-            const selectedOperationsField = operationsContainer.querySelector('.selected-operations');
-            let newResultId = null;
-
-            // Vérification des champs requis
-            if (operationId && ingredientId) {
-                const editingOperationId = operationPopup.getAttribute('data-editing-operation-id');
-
-                // Mode édition : mettre à jour l'opération existante
-                if (editingOperationId) {
-                    const operationItem = document.getElementById(editingOperationId);
-                    let resultToRemove = null;
-                    let currentResultId = null;
-                    
-                    // Trouver l'élément de l'opération à modifier
-                    const operationElement = operationItem.querySelector('.operation');
-                    const ingredientElement = operationItem.querySelector('.ingredient');
-                    
-                    operationElement.textContent = operationSelect.options[operationSelect.selectedIndex].text;
-                    ingredientElement.textContent = ingredientSelect.options[ingredientSelect.selectedIndex].text;
-
-                    // Recuperer le nouvel id de l'operation
-                    const updatedOperationId = operationSelect.value;
-                    const currentOperationId = parseInt(operationElement.id.split('_')[2]);
-                    const currentOperationIndex = operationElement.id.split('_')[1]; // 'X' dans 'operation_X_Y'
-
-                    // Recuperer le nouvel id de l'ingredient
-                    const updatedIngredientId = ingredientSelect.value;
-                    const currentIngredientId = parseInt(ingredientElement.id.split('_')[2]);
-                    const currentIngredientIndex = ingredientElement.id.split('_')[1]; // 'X' dans 'operation_X_Y'
-
-                    // Mettre à jour les id operation et ingredient
-                    operationElement.id = `operation_${currentOperationIndex}_${updatedOperationId}`;
-                    ingredientElement.id = `ingredient_${currentIngredientIndex}_${updatedIngredientId}`;
-
-                    const resultDescriptionElement = operationItem.querySelector('span[id^="result_"]');
-                    resultDescriptionElement ? currentResultId = resultDescriptionElement.id.split('_')[1] : null;
-                    if (resultDescription) {
-                        // cas 1 : le resultat existe deja et il est mis a jour
-                        if (resultDescriptionElement) {
-                            resultDescriptionElement.textContent = resultDescription;
-                            newResultId = parseInt(resultDescriptionElement.id.split('_')[1]);
-
-                            // Mise à jour du champ caché des ingrédients intermédiaires
-                            const resultIngredientsField = document.getElementById('result-ingredients');
-                            let resultIngredients = JSON.parse(resultIngredientsField.value || '[]');
-                            resultIngredients = resultIngredients.map(ri => 
-                                ri.resultId == newResultId ? { ...ri, resultName: resultDescription } : ri
-                            );
-
-                            // Mettre à jour le champ caché
-                            resultIngredientsField.value = JSON.stringify(resultIngredients);
-                        }
-                        // cas 3 : le resultat n'existe pas et j'en crée un nouveau
-                        else {
-                            newResultId = addResultIngredient(resultDescription);
-                            // Créer les éléments
-                            const br = document.createElement('br');
-                            const textNode = document.createTextNode(' ---> ');
-                            const arrowSpan = document.createElement('span');
-                            arrowSpan.appendChild(textNode);
-                            const span = document.createElement('span');
-                            span.id = `result_${newResultId}`;
-                            span.textContent = resultDescription;
-                            
-                            // Insérer après l'élément strong.ingredient
-                            ingredientElement.parentNode.insertBefore(br, ingredientElement.nextSibling);
-                            ingredientElement.parentNode.insertBefore(arrowSpan, br.nextSibling);
-                            ingredientElement.parentNode.insertBefore(span, textNode.nextSibling);
-                        }
-                    } else if (resultDescriptionElement) {
-                        // cas 2 : Supprime l'ancienne description si elle devient vide
-                        let resultId = resultDescriptionElement.id.split('_')[1]; // Extrait l'ID du resultat existant
-                        let nextSibling = ingredientElement.nextElementSibling;
-                        while (nextSibling) {
-                            const elementToRemove = nextSibling;
-                            nextSibling = nextSibling.nextElementSibling;
-                            elementToRemove.remove();
-                        }
-
-                        // Selection du champ caché des ingrédients intermédiaires
-                        const resultIngredientsField = document.getElementById('result-ingredients');
-                        let resultIngredients = JSON.parse(resultIngredientsField.value || '[]');
-                        // Supprimer le résultat du champ caché
-                        resultIngredients = resultIngredients.filter(ri => ri.resultId != resultId);
-                        resultIngredientsField.value = JSON.stringify(resultIngredients);
-                        resultToRemove = parseInt(resultId);
-                    }
-
-                    // Mettre à jour les données JSON des opérations
-                    let stepOperations = JSON.parse(selectedOperationsField.value || '[]');
-                    stepOperations = stepOperations.map(op => {
-                        // Vérifier si l'entrée correspond à l'opération en cours de modification
-                        const isSameOperation = 
-                            op.operationId == currentOperationId &&
-                            op.ingredientId == currentIngredientId &&
-                            (op.operationResult == currentResultId || (op.operationResult === null && currentResultId === null));
-
-                        if (isSameOperation) { 
-                            return {
-                                ...op,
-                                operationId: parseInt(updatedOperationId),
-                                ingredientId: parseInt(updatedIngredientId),
-                                operationResult: newResultId !== null ? newResultId : null, // Mettre à jour le résultat si besoin
-                            };
-                        }
-                        return op;
-                    });
-                    selectedOperationsField.value = JSON.stringify(stepOperations);
-
-                    // si le resultat a ete supprimé, supprimer les dépendances en cascade
-                    resultToRemove ? removeDependentOperations(resultToRemove) : null;
-
-                    // Réinitialiser l'attribut du popup
-                    operationPopup.removeAttribute('data-editing-operation-id');
-
-                    // Mise a jour des opérations dépendantes apres edition
-                    if (newResultId !== null) {
-                        updateOperationResults(newResultId, resultDescription); // Passer le nouveau nom du résultat
-                    }
-                }
-                // Mode Ajout de nouvelle opération
-                else {
-                    // Identifier l'étape par son index dans le conteneur
-                    const stepIdElement = activeStepItem.querySelector('div[id^="recipe_recipeSteps_"]');
-                    const match = stepIdElement.id.match(/recipe_recipeSteps_(\d+)/);
-                    const stepIndex = parseInt(match[1], 10); // Extraire l'index
-                    let stepOperations = JSON.parse(selectedOperationsField.value || '[]');
-
-                    const resultHtml = resultDescription.trim() !== "" ? (() => {
-                        newResultId = addResultIngredient(resultDescription);
-                        return `<br> <span>---></span> <span id="result_${newResultId}">${resultDescription}</span>`;
-                    })() : "";
-
-                    // Ajouter visuellement l'opération à la description de l'étape
-                    stepOp.innerHTML += `
-                        <div class="operation-item d-flex" id="operation-item_${stepIndex}_${stepOperations.length ?? 0}">
-                            <div class="m-2 operation-remove-frame">
-                                <button type="button" class="remove-operation btn btn-danger">x</button>
-                            </div>
-                            <div class="operation-frame">
-                                <strong class="operation" id="operation_${stepIndex}_${operationId}">${operationName}</strong> 
-                                <strong>-</strong> 
-                                <strong class="ingredient" id="ingredient_${stepIndex}_${ingredientId}">${ingredientName}</strong>
-                                ${resultHtml}
-                            </div>
-                            <div class="m-2 operation-edit-frame ms-auto">
-                                <button type="button" class="edit-operation btn btn-success">...</button>
-                            </div>
-                        </div>
-                    `;
-
-                    // Synchroniser les données avec le champ caché des operations
-                    stepOperations = JSON.parse(selectedOperationsField.value || '[]');
-                    
-                    // Ajouter une nouvelle opération liée à l'étape
-                    stepOperations.push({
-                        stepIndex: stepIndex,
-                        operationId: parseInt(operationId),
-                        ingredientId: parseInt(ingredientId),
-                        operationResult: newResultId !== null ? newResultId : null, // Stocker l'ID du résultat, ou null si aucun
-                    });
-
-                    selectedOperationsField.value = JSON.stringify(stepOperations);
-                }
-
-                // Fermer le popup après sauvegarde
-                operationPopup.setAttribute('data-editing-operation-id', '');
-                operationPopup.style.display = 'none';
-            } else {
-                alert('Veuillez remplir tous les champs pour l\'opération.');
-            }
-        }
-
-        // Editer une opération
-        if (e.target && e.target.classList.contains('edit-operation')) {
-            activeStepItem = e.target.closest('.step-item');
-            const operationItem = e.target.closest('.operation-item');
-
-            // Récupérer les elements DOM de l'opération
-            const operationElement = operationItem.querySelector('.operation');
-            const ingredientElement = operationItem.querySelector('.ingredient');
-            const resultDescriptionElement = operationItem.querySelector('span[id^="result_"]'); // Chercher directement le span avec un ID commençant par "result_"
-
-            // Recuperer les valeurs des elemnts DOM (id et nom de l'operation et de l'ingrédient)
-            const operationId = operationElement.id.split('_').pop();
-            const ingredientId = ingredientElement.id.split('_').pop();
-            const operationName = operationElement.textContent.trim();
-            const ingredientName = ingredientElement.textContent.trim();
-            const resultDescription = resultDescriptionElement ? resultDescriptionElement.textContent.trim() : '';
-
-            // Mettre à jour les champs du popup avec les valeurs actuelles
-            const operationSelect = operationPopup.querySelector('.operation-select');
-            const ingredientSelect = operationPopup.querySelector('.ingredient-select');
-            const descriptionInput = operationPopup.querySelector('.result-description');
-
-            // Sauvegarder l'opération actuelle dans une variable pour la modifier après validation
-            operationPopup.setAttribute('data-editing-operation-id', operationItem.id);
-
-            // Mettre à jour la liste des ingrédients dans le popup
-            updateIngredientOptions(operationPopup);
-
-            operationSelect.value = operationId;
-            ingredientSelect.value = ingredientId;
-            descriptionInput.value = resultDescription;
-
-            // Afficher le popup
-            operationPopup.style.display = 'block';
-        }
-
-        // Supprimer une opération
-        if (e.target && e.target.classList.contains('remove-operation')) {
-            const operationItem = e.target.closest('.operation-item');
-            // Afficher le popup de confirmation avant suppression
-            showConfirmationPopup("Si vous supprimez cette opération, toutes les opérations qui en dépendent seront également supprimées. Confirmez-vous la suppression ?", (confirm) => {
-                if (confirm) {
-                    removeOperation(operationItem);
-                } else {
-                    console.log("Suppression annulée");
-                }
-            });
-        }
-    });
-    
-    // Surveillance des keypress dans le champ description
-    stepsContainer.addEventListener('keydown', (e) => {
-        const stepItem = e.target.closest('.step-item');
-        //Ajout d'une description par l'utilisateur
-        if(e.target && e.target.classList.contains('step-description') ){
-            if (/^[a-z0-9.,;:!?()"'%+\-]$/i.test(e.key) || ['Enter', 'Backspace', ' ', 'Home', 'End', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Control', 'Shift', 'Delete'].includes(e.key)) {
-                return;
-            }
-            else if(e.ctrlKey && e.key === 'b'){
-                e.preventDefault();
-                document.execCommand('bold');
-                return;
-            }
-            else if(e.ctrlKey && e.key === 'u'){
-                e.preventDefault();
-                document.execCommand('underline');
-                return;
-            }
-            else if(e.ctrlKey && e.key === 'i'){
-                e.preventDefault();
-                document.execCommand('italic');
-                return;
-            }
-            else {
-                e.preventDefault();
-            }
-        }
-    });
-    // Surveillance des copy/paste dans le champ description
-    stepsContainer.addEventListener('paste', (e) => {
-        const stepItem = e.target.closest('.step-item');
-        //Ajout d'une description par l'utilisateur
-        if(e.target && e.target.classList.contains('step-description') ){
-            e.preventDefault();
-            const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-            const sanitizedValue = sanitizeInput(text);
-            e.target.insertAdjacentText('beforeend', sanitizedValue);
-        }
-    });
-
-    // Synchroniser les contenus au moment de la soumission
-    document.querySelector('form[name="recipe"]').addEventListener('submit', (e) => {
-        
-        const stepItems = stepsContainer.querySelectorAll('.step-item');
-        const allSelectedOperations = [];
-
-        // Vérifier que des ingrédients ont été sélectionnés
-        const selectedIngredientsField = document.getElementById('recipe_selectedIngredients');
-        const selectedIngredients = JSON.parse(selectedIngredientsField.value || '[]');
-        if (selectedIngredients.length === 0) {
-            alert('Veuillez sélectionner au moins un ingrédient avant de soumettre.');
-            e.preventDefault(); // Empêche l'envoi du formulaire
-            return;
-        }
-
-        // Mettre à jour les quantités et les unités des ingrédients avant la soumission
-        const ingredientItems = ingredientsContainer.querySelectorAll('.ingredient-item');
-        
-        ingredientItems.forEach((ingredientItem) => {
-            const ingredientId = ingredientItem.getAttribute('data-id');
-            const quantityInput = ingredientItem.querySelector('.ingredient-quantity');
-            const unitInput = ingredientItem.querySelector('.ingredient-unit');
-            
-            const quantity = parseFloat(quantityInput.value);
-            const unit = unitInput.value.trim(); // Récupérer l'unité saisie (peut être vide)
-
-            // Vérifier si la quantité est valide
-            if (isNaN(quantity) || quantity <= 0) {
-                alert('Veuillez entrer une quantité valide pour chaque ingrédient.');
-                e.preventDefault(); // Empêche l'envoi du formulaire
-                return;
-            }
-
-            // Mettre à jour la quantité et l'unité dans `selectedIngredients`
-            const ingredientIndex = selectedIngredients.findIndex(ing => parseInt(ing.ingredientId, 10) === parseInt(ingredientId, 10)); // Conversion explicite
-            if (ingredientIndex !== -1) {
-                selectedIngredients[ingredientIndex].quantity = quantity;
-                selectedIngredients[ingredientIndex].unit = unit; // Ajouter l'unité
-            }
-        });
-
-        // Mettre à jour le champ caché avec les quantités et unités modifiées
-        selectedIngredientsField.value = JSON.stringify(selectedIngredients);
-
-        // Parcourir les étapes et synchroniser les opérations
-        stepItems.forEach((stepItem, index) => {
-            //Synchroniser les descriptions des étapes
-            const stepDescription = stepItem.querySelector('.step-description');
-            syncStepDescription(stepItem, stepDescription.innerHTML);
-            
-            // Vérifier les opérations associées à chaque étape
-            const operationsContainer = stepItem.querySelector('.added-operations');
-            const selectedOperationsField = operationsContainer.querySelector('.selected-operations');
-            const stepOperations = JSON.parse(selectedOperationsField.value || '[]');
-
-            // Vérifier qu'il y a bien des opérations associées, sinon un message d'avertissement
-            if (stepOperations.length === 0) {
-                console.warn(`Aucune opération associée à l'étape ${index + 1} (index ${index}).`);
-            }
-
-            // Ajouter le stepIndex à toutes les opérations pour la soumission
-            stepOperations.forEach((operation) => {
-                if (!operation.stepIndex) {
-                    operation.stepIndex = index; // Utilise l'index de l'étape
-                }
-            });
-
-            // Ajouter les opérations de cette étape au tableau global
-            allSelectedOperations.push(...stepOperations);
-
-            // Mettre à jour le champ caché avec les opérations modifiées
-            selectedOperationsField.value = JSON.stringify(stepOperations); // Sérialisation
-        });
-
-        // Mettre à jour le champ caché global avec toutes les opérations
-        const allSelectedOperationsField = document.getElementById('all-selected-operations');
-        allSelectedOperationsField.value = JSON.stringify(allSelectedOperations);
-
-        // Vérifier si le formulaire est valide avant soumettre (ajoute d'autres validations si nécessaire)
-        if (allSelectedOperations.length === 0) {
-            alert('Veuillez ajouter des opérations avant de soumettre.');
-            e.preventDefault(); // Empêche l'envoi du formulaire
-        }
-    });
-
-});
-</script>
 {% endblock %}

@@ -7,6 +7,8 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\Ignore;
 use App\Entity\Recipe;
 use App\Entity\StepOperation;
 use App\Entity\Operation;
@@ -37,12 +39,13 @@ class Step
 
     #[ORM\ManyToOne(inversedBy: 'recipeSteps')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Ignore]
     private ?Recipe $stepRecipe = null;
 
     /**
      * @var Collection<int, StepOperation>
      */
-    #[ORM\OneToMany(targetEntity: StepOperation::class, mappedBy: 'step', orphanRemoval: true, cascade: ['persist', 'remove'])]
+    #[ORM\OneToMany(targetEntity: StepOperation::class, mappedBy: 'step', orphanRemoval: true, cascade: ['remove'], fetch: 'EAGER')]
     private Collection $stepOperations;
 
     public function __construct()

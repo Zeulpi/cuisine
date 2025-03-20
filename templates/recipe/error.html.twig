@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Erreur{% endblock %}
+
+{% block body %}
+    <div class="error-container">
+        <h1>Une erreur est survenue</h1>
+        <p>{{ errorMessage }}</p>
+        <a href="{{ path('app_recipe') }}" class="btn btn-primary" data-turbo="false">Retour aux recettes</a>
+    </div>
+{% endblock %}

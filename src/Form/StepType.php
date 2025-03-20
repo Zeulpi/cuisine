@@ -15,6 +15,17 @@ class StepType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder
+            ->add('id', HiddenType::class, [
+                        'mapped' => false, // Ne doit pas être modifié par le formulaire
+                        'attr' => [
+                            'data-int' => true, // ✅ Indice pour conversion JS si nécessaire
+                        ]
+                    ])
+            ->add('stepNumber', HiddenType::class, [
+                        'attr' => [
+                            'data-int' => true, // ✅ Indice pour conversion JS si nécessaire
+                        ]
+                    ])
             ->add('stepText', HiddenType::class, [
                 'attr' => [
                     'class' => 'step-description-hidden'
@@ -22,11 +33,15 @@ class StepType extends AbstractType
             ])
             ->add('stepTime', IntegerType::class, [
                 'attr' => [
-                    'min' => 0, 
+                    'min' => 1,
                     'step' => 1,
                     'type' => 'number',
-                    'class' => 'step-time'
+                    'class' => 'step-time',
+                    'data-int' => true,
                 ],
+                'label' => 'Durée de l\'étape',
+                'required' => true,
+                'label_attr' => ['class' => 'step-time-label'],
                 'constraints' => [
                     new Assert\Positive(),
                 ],
@@ -40,13 +55,16 @@ class StepType extends AbstractType
                 'required' => true,
                 'attr' => [
                     'class' => 'step-time-unit'
-                ]
+                ],
+                'label' => false,
             ])
             ->add('stepSimult', CheckboxType::class, [
                 'required' => false,
                 'attr' => [
                     'class' => 'step-simult'
-                ]
+                ],
+                'label' => 'Etape simultanée ?',
+                'label_attr' => ['class' => 'step-simult-label'],
             ]);
     }
 
@@ -54,6 +72,7 @@ class StepType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Step::class,
+            'is_edit_mode' => false,
         ]);
     }
 }

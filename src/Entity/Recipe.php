@@ -4,9 +4,12 @@ namespace App\Entity;
 
 use App\Repository\RecipeRepository;
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\ORM\PersistentCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\Ignore;
 
 #[ORM\Entity(repositoryClass: RecipeRepository::class)]
 class Recipe
@@ -25,19 +28,20 @@ class Recipe
     /**
      * @var Collection<int, User>
      */
-    #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'UserNote')]
+    #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'UserNote', fetch: 'EAGER')]
     private Collection $recipeNote;
 
     /**
      * @var Collection<int, Ingredient>
      */
     #[ORM\ManyToMany(targetEntity: Ingredient::class, inversedBy: 'ingredientRecipe')]
+    #[Ignore]
     private Collection $recipeIngredient;
 
     /**
      * @var Collection<int, Step>
      */
-    #[ORM\OneToMany(targetEntity: Step::class, mappedBy: 'stepRecipe', orphanRemoval: true, cascade: ['persist', 'remove'])]
+    #[ORM\OneToMany(targetEntity: Step::class, mappedBy: 'stepRecipe', orphanRemoval: true, cascade: ['persist', 'remove'], fetch: 'EAGER')]
     private Collection $recipeSteps;
 
     #[ORM\Column(type: Types::SMALLINT)]
@@ -46,11 +50,18 @@ class Recipe
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private $recipeQuantities = [];
 
+    /**
+     * @var Collection<int, Tag>
+     */
+    #[ORM\ManyToMany(targetEntity: Tag::class, inversedBy: 'tagRecipe', fetch: 'EAGER')]
+    private Collection $recipeTags;
+
     public function __construct()
     {
         $this->recipeNote = new ArrayCollection();
         $this->recipeIngredient = new ArrayCollection();
         $this->recipeSteps = new ArrayCollection();
+        $this->recipeTags = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -142,8 +153,8 @@ class Recipe
     {
         if (!$this->recipeSteps->contains($recipeStep)) {
             $this->recipeSteps->add($recipeStep);
-            $recipeStep->setStepRecipe($this);
         }
+        $recipeStep->setStepRecipe($this);
 
         return $this;
     }
@@ -198,6 +209,30 @@ class Recipe
     public function removeIngredientQuantity(int $ingredientId): self
     {
         unset($this->recipeQuantities[$ingredientId]);
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Tag>
+     */
+    public function getRecipeTags(): Collection
+    {
+        return $this->recipeTags;
+    }
+
+    public function addRecipeTag(Tag $recipeTag): static
+    {
+        if (!$this->recipeTags->contains($recipeTag)) {
+            $this->recipeTags->add($recipeTag);
+        }
+
+        return $this;
+    }
+
+    public function removeRecipeTag(Tag $recipeTag): static
+    {
+        $this->recipeTags->removeElement($recipeTag);
 
         return $this;
     }

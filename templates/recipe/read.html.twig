@@ -1,14 +1,34 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello RecipeController!{% endblock %}
+{% block title %}Liste des recettes{% endblock %}
 
+{% block stylesheets %}
+        <link rel="stylesheet" href="{{ asset('styles/recipe_read.css') }}" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css">
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+
+    <script type="application/json" id="recipe-data">
+        {{ { 
+            recipesList: recipesList, 
+            itemsPerPage: itemsPerPage,
+            csrfToken: csrf_token('delete_recipe'),
+            urls: {
+                update: path('recipe_update', { id: '__ID__' }),
+                delete: path('recipe_delete', { id: '__ID__' })
+            }
+        }|json_encode|raw }}
+    </script>
+    <script src="{{ asset('js/recipe_read.js') }}"></script>
+    <script src="{{ asset('js/recipe_delete.js') }}"></script>
+
+    {# <pre>{{ dump(tags) }}</pre>
+    <pre>{{ dump(recipesList) }}</pre> #}
+{% endblock %}
 
 {% block body %}
-<script src="{{ asset('js/recipe_delete.js') }}"></script>
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
 
 {% for message in app.flashes('success') %}
     <div class="alert alert-success">
@@ -16,44 +36,87 @@
     </div>
 {% endfor %}
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+{% for type, messages in app.flashes %}
+    <div class="alert alert-{{ type }}">
+        {% for message in messages %}
+            {{ message }}
+        {% endfor %}
+    </div>
+{% endfor %}
 
+
+<div class="main-container">
     <h2>Liste des recettes</h2>
-    <table>
-        <thead>
-            <tr>
-                <th scope="col">Recette</th>
-                <th scope="col">image</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for recipe in recipesList %}
-            <tr>
-                <td>{{ recipe.name }}</td>
-                <td>
+    
+    
+    <div class="list-container">
+        <div class="search-frame">
+            <div class="search-name">
+                <input type="text" class="recipe-search" id="recipe-search" placeholder="Chercher par nom">
+            </div>
+        </div>
+        <div class="tags-frame">
+            <div class="tag-list">
+                {% for tag in tags %}
+                    <button type="button" 
+                        class="tag-button"
+                        data-id="{{ tag.id }}"
+                        data-color="{{ tag.tagColor }}"
+                        > {{tag.tagName}}
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="infos-frame">
+            <div class="infos-name">
+                Recette
+            </div>
+            <div class="infos-image">
+                Image
+            </div>
+            <div class="infos-btns">
+            </div>
+        </div>
+        <div class="recipe-container">
+            {# {% for recipe in recipesList %}
+            <div class="recipe-frame">
+                <div class="recipe-name">
+                    {{ recipe.name }}
+                </div>
+                <div class="recipe-image">
                     {% if recipe.img %}
                         <img src="{{ asset('images/recipes/' ~ recipe.img) }}" alt="Image" style="width:100px">
                     {% else %}
                         <img src="" alt="Image" style="width:100px">
                     {% endif %}
-                <td>
-                    <a href="{{ path('recipe_update', { id: recipe.id }) }}" class="btn btn-success">Edit</a>
-                </td>
-                <td>
+                </div>
+                <div class="recipe-btns">
+                    <a href="{{ path('recipe_update', { id: recipe.id }) }}" class="btn btn-success" data-turbo="false">Edit</a>
                     <a href="{{ path('recipe_delete', { id: recipe.id }) }}" class="btn btn-danger delete-button"  data-recipe-name="{{ recipe.name }}" data-csrf-token="{{ csrf_token('delete_recipe') }}">
-                        Delete
+                        X
                     </a>
-                </td>
-            </tr>
-        {% endfor %}
-            <tr>
-                <td colspan="4">
-                    <a href="{{ path('recipe_create') }}">Créer une recette</a>
-                </td>
-            </tr>
-        </tbody>
-    </table>
+                </div>
+            </div>
+            {% endfor %} #}
+        </div>
+        <div class="actions-frame">
+            <div class="action-pages">
+                <div class="pages-down">
+                    <button id="page-first" disabled><<</button>
+                    <button id="page-prev" disabled><</button>
+                </div>
+                <div id="pages-count">
+                </div>
+                <div class="pages-up">
+                    <button id="page-next">></button>
+                    <button id="page-last">>></button>
+                </div>
+            </div>
+            <div class="action-create">
+                <a href="{{ path('recipe_create') }}" data-turbo="false" class="btn btn-primary add-recipe-btn">Créer une recette</a>
+            </div>
+        </div>
+    </div>
 </div>
 <div>
     <a href="{{ path('app_home') }}">Home</a>

@@ -1,3 +1,231 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.page-title{
+    display : flex;
+    justify-content: center;
+    margin: 2em;
+    text-decoration: underline;
+}
+
+.main-container {
+    margin: 1em auto;
+    max-width: 800px;
+    width: 95%;
+    font: 18px/1.5 sans-serif;
+}
+/* ----------------------- */
+/* Recette : nom, portions */
+/* ----------------------- */
+
+.recipe-title, .recipe-ingredients, .recipe-steps {
+    border: solid 1px #007bff;
+    border-radius: 5px;
+    padding: 5px;
+    margin: 5px 0;
+}
+
+#recipe_recipeName {
+    width: 50%;
+}
+#recipe_recipePortions {
+    width: 10%;
+    text-align:center;
+}
+#recipe_recipePortions::-webkit-inner-spin-button,
+#recipe_recipePortions::-webkit-outer-spin-button {
+    opacity: 1; 
+    display: block;
+}
+.name-container > div, .portions-container > div {
+    display: flex;
+    justify-content: space-between;
+}
+.tag-button {
+    border: 1px solid #ccc;
+    background-color: white;
+    padding: 2px 4px;
+    margin: 2px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+}
+
+.tag-button:not(:disabled):hover {
+    background-color: #f0f0f0;
+}
+
+.tag-button.selected {
+    background-color: #007bff;
+    color: white;
+    border-color: #0056b3;
+}
+.tag-button:disabled {
+    cursor:default;
+}
+.hidden {
+    display: none;
+}
+
+.image-input {
+    display: flex;
+    justify-content:baseline;
+}
+.image-preview {
+    max-height: 300px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+.image-preview > img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+    object-position: center;
+}
+#remove-image-button {
+    position: absolute; /* ✅ Pour positionner par rapport à .image-preview */
+    top: 10px; /* ✅ Ajuste la marge avec le haut */
+    right: 10px; /* ✅ Ajuste la marge avec la droite */
+    background-color: red; /* Optionnel, pour une meilleure visibilité */
+    color: white;
+    border: 2px solid white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-weight: bold;
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    cursor: pointer;
+}
+#image-preview-img, #remove-image-button {
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+/* ---------------------------- */
+/* Ingredients : nom, qty, unit */
+/* ---------------------------- */
+
+.ingredient-item {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(1, 1fr);
+    margin: 1px 0;
+    align-items: center; /* Aligne tout le contenu verticalement */
+    min-height: 50px; /* Assure que toutes les lignes aient la même hauteur */
+    max-height: 50px;
+    border: 1px solid mediumseagreen;
+    border-radius: 5px;
+}
+.ingredient-img {
+    width: 100%;
+    height: 50px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ingredient-img > img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+.ingredient-name {
+    grid-column-start: 2;
+    grid-column-end: 5;
+}
+.ingredient-quantity {
+    grid-column-start: 5;
+    width: 100%;
+    text-align:center;
+}
+.ingredient-quantity::-webkit-inner-spin-button,
+.ingredient-quantity::-webkit-outer-spin-button {
+    opacity: 1; 
+    display: block;
+}
+.ingredient-unit {
+    grid-column-start: 6;
+    grid-column-end: 8;
+    width: 100%;
+}
+.ingredient-btn {
+    grid-column-start: 8;
+    justify-self: end;
+}
+
+/* ---------------------------- */
+/* Etapes : formulaire d'etape  */
+/* ---------------------------- */
+
+.step-item {
+    border: solid 1px lightslategray;
+    border-radius: 2px;
+    padding: 2px;
+    margin: 5px 0;
+}
+
+.step-header {
+    display: flex;
+    justify-content: space-between;
+}
+
+.step-time-container {
+    display: flex;
+    flex-direction: row;
+}
+
+.step-time-frame {
+    margin-right: 5px;
+}
+
+.step-time {
+    width: 70px;
+}
+
+.step-time-label {
+    margin-right: 10px;
+}
+
+.step-time::-webkit-inner-spin-button,
+.step-time::-webkit-outer-spin-button {
+    opacity: 1; 
+    display: block;
+}
+
+.step-time-unit-frame {
+    margin-right: 5px;
+}
+
+.step-time-unit {
+    height: 100%;
+}
+
+.step-simult-frame {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+}
+
+.step-simult {
+    margin-right: 5px;
+}
+
+.step-time-hr {
+    width: 100%;
+    opacity: 0.10;
+}
+
+.step-frame {
+    margin-bottom: 10px;
+}
+
 .operation {
     color: #007bff;  /* Bleu pour les opérations */
     font-weight: bold;
@@ -11,7 +239,7 @@
 .step-description {
     color: #6c757d;  /* Gris pour les descriptions d'étapes */
     background-color: aliceblue;
-    border: rounded 1px #007bff;
+    border: solid 1px mediumseagreen;
     border-radius: 5px;
 }
 .step-operation {
@@ -28,11 +256,7 @@
     border-radius: 2px;
 }
 
-.step-item {
-    border: solid 1px lightslategray;
-    border-radius: 2px;
-    padding: 2px;
-}
+
 
 /* Couleur de fond pour les ingrédients de la recette dans le popup operations */
 .ingredient-option {
