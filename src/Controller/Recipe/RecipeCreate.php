@@ -56,6 +56,11 @@ final class RecipeCreate extends AbstractController{
         SerializerInterface $serializer,
         ): Response
     {
+        if (!$this->isGranted('ROLE_ADMIN')) {
+            $this->addFlash('warning', 'Vous devez être connecté pour modifier une recette.');
+            return $this->redirectToRoute('app_home');
+        }
+        
         $recipe_raw = $recipe_raw ?? new Recipe();
 
         // Récupérer les ingrédients pour la page demandée

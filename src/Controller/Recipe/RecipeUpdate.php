@@ -22,6 +22,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 
 ini_set('max_execution_time', 0); // Désactive temporairement la limite de temps
@@ -44,8 +45,14 @@ final class RecipeUpdate extends AbstractController{
         EntityManagerInterface $entityManager,
         OperationRepository $operationRepository,
         SerializerInterface $serializer,
+        TokenStorageInterface $tokenStorage
         ): Response
     {
+        if (!$this->isGranted('ROLE_ADMIN')) {
+            $this->addFlash('warning', 'Vous devez être connecté pour modifier une recette.');
+            return $this->redirectToRoute('app_home');
+        }
+
         $recipe = $entityManager->getRepository(Recipe::class)->find($id);
         if (!$recipe) {
             throw $this->createNotFoundException("Recette non trouvée !");

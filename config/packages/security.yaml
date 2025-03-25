@@ -13,10 +13,26 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
+
         main:
             lazy: true
             provider: app_user_provider
 
+            custom_authenticator: App\Security\AppAuthenticator
+            entry_point: App\Security\AppAuthenticator
+
+            logout:
+                path: logout
+                target: /
+
+            remember_me:
+                secret: '%kernel.secret%'
+                lifetime: 604800
+                path: /
+
+                # by default, the feature is enabled by checking a checkbox in the
+                # login form, uncomment the following line to always enable it.
+                #always_remember_me: true
             # activate different ways to authenticate
             # https://symfony.com/doc/current/security.html#the-firewall
 
@@ -26,8 +42,20 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-        #- { path: ^/admin, roles: PUBLIC_ACCESS }
-        # - { path: ^/profile, roles: ROLE_USER }
+        # Autorise l'accès libre à la page de login
+        - { path: ^/login, roles: PUBLIC_ACCESS }
+        - { path: ^/logout, roles: PUBLIC_ACCESS }
+
+        # 🔒 Protège la page de lecture (liste des recettes)
+        - { path: ^/recipe$, roles: PUBLIC_ACCESS }
+        # Protège la création et l'édition de recettes
+        - { path: ^/recipe/new, roles: ROLE_ADMIN }
+        - { path: ^/recipe/update, roles: ROLE_ADMIN }
+        - { path: ^/recipe/delete, roles: ROLE_ADMIN }
+        - { path: ^/admin, roles: ROLE_ADMIN }
+
+        # Par défaut, tout le reste est accessible à tous
+        - { path: ^/, roles: PUBLIC_ACCESS }
 
 when@test:
     security:

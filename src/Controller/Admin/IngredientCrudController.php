@@ -32,7 +32,7 @@ class IngredientCrudController extends AbstractCrudController
             TextField::new('ingredient_unit', 'Unité de l\'ingrédient'),
             ImageField::new('ingredient_img', 'Image de l\'ingrédient')
             ->setUploadDir('public/images/ingredients/') 
-            ->setBasePath('')
+            ->setBasePath('images/ingredients/')
             ->setUploadedFileNamePattern('[name]-[uuid].[extension]')
             ->setRequired($pageName === Crud::PAGE_NEW),
         ];

@@ -26,6 +26,11 @@ final class RecipeController extends AbstractController{
     #[Route('/recipe', name: 'app_recipe')]
     public function getRecipe(RecipeRepository $repository, TagRepository $tagRepository): Response
     {
+        if (!$this->isGranted('ROLE_ADMIN')) {
+            $this->addFlash('warning', 'Vous devez être connecté pour accedert a cette page.');
+            return $this->redirectToRoute('app_home');
+        }
+
         // Récupérer les objets depuis la base de données
         $recipes = $repository->findBy([], ['recipeName' => 'ASC']);
         $tags = $tagRepository->findBy([], ['tagName' => 'ASC']);

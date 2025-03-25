@@ -14,14 +14,28 @@
         {{ { 
             recipesList: recipesList, 
             itemsPerPage: itemsPerPage,
-            csrfToken: csrf_token('delete_recipe'),
+            csrfTokens: {
+                delete: csrf_token('delete_recipe'),
+                edit: csrf_token('edit_recipe')
+            },
             urls: {
                 update: path('recipe_update', { id: '__ID__' }),
                 delete: path('recipe_delete', { id: '__ID__' })
             }
         }|json_encode|raw }}
     </script>
-    <script src="{{ asset('js/recipe_read.js') }}"></script>
+    <script defer>
+        document.addEventListener("DOMContentLoaded", function () {
+            let script = document.createElement("script");
+            script.src = "{{ asset('js/recipe_read.js') }}";
+            script.type = "module";
+            document.body.appendChild(script);
+        });
+        const recipeListPath = "{{ asset('js/recipe_read.js') }}";
+    </script>
+    {% if is_granted('ROLE_ADMIN') %}
+        <script src="{{ asset('js/recipe_read_btn.js') }}" type="module"></script>
+    {% endif %}
     <script src="{{ asset('js/recipe_delete.js') }}"></script>
 
     {# <pre>{{ dump(tags) }}</pre>
@@ -113,7 +127,9 @@
                 </div>
             </div>
             <div class="action-create">
-                <a href="{{ path('recipe_create') }}" data-turbo="false" class="btn btn-primary add-recipe-btn">Créer une recette</a>
+                {% if is_granted('ROLE_ADMIN') %}
+                    <a href="{{ path('recipe_create') }}" data-turbo="false" class="btn btn-primary add-recipe-btn">Créer une recette</a>
+                {% endif %}
             </div>
         </div>
     </div>
