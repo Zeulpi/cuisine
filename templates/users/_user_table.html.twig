@@ -1,0 +1,81 @@
+<div id="user-table-pagination-container">
+    <button id="apply-filters" type="button">Appliquer les filtres</button>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Nom d'utilisateur</th>
+                <th>
+                    Rôles
+                    <div>
+                        <label>
+                            <input type="checkbox" name="roles[]" value="none"> Aucun
+                        </label>
+                        <label>
+                            <input type="checkbox" name="roles[]" value="ROLE_USER"> Users
+                        </label>
+                        <label>
+                            <input type="checkbox" name="roles[]" value="ROLE_ADMIN"> Admins
+                        </label>
+                    </div>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in pagination %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>
+                        <div>
+                            {{ user.roles|join(', ') }}
+                        </div>
+
+                        {% set isSelf = app.user.id == user.id %}
+                        {% set hasUser = 'ROLE_USER' in user.roles %}
+                        {% set hasAdmin = 'ROLE_ADMIN' in user.roles %}
+
+                        {% if not hasUser and not hasAdmin %}
+                            {# Aucun rôle → promouvoir vers ROLE_USER #}
+                            <button class="btn btn-sm btn-success role-action {{ isSelf ? 'disabled' : '' }}" data-user-id="{{ user.id }}" data-action="upgrade" {% if isSelf %}disabled{% endif %}>Promouvoir</button>
+
+                        {% elseif hasUser and not hasAdmin %}
+                            {# ROLE_USER seul → peut être promu ou rétrogradé #}
+                            <button class="btn btn-sm btn-warning role-action {{ isSelf ? 'disabled' : '' }}" data-user-id="{{ user.id }}" data-action="downgrade" {% if isSelf %}disabled{% endif %}>Rétrograder</button>
+                            <button class="btn btn-sm btn-success role-action {{ isSelf ? 'disabled' : '' }}" data-user-id="{{ user.id }}" data-action="upgrade" {% if isSelf %}disabled{% endif %}>Promouvoir</button>
+
+                        {% elseif hasUser and hasAdmin %}
+                            {# ROLE_USER + ROLE_ADMIN → peut être rétrogradé #}
+                            <button class="btn btn-sm btn-warning role-action {{ isSelf ? 'disabled' : '' }}" data-user-id="{{ user.id }}" data-action="downgrade" {% if isSelf %}disabled{% endif %}>Rétrograder</button>
+
+                        {% elseif hasAdmin and not hasUser %}
+                            {# Cas rare : ROLE_ADMIN seul → pas de bouton #}
+                            <span class="text-muted">Rôle invalide</span>
+                        {% endif %}
+                    </td>
+
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="4">Aucun utilisateur trouvé.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="pagination">
+        {% for page in 1..pagination.pageCount %}
+            <button type="button"
+                    data-page="{{ page }}"
+                    class="page-link {{ page == pagination.currentPageNumber ? 'active' : '' }} {{ page == pagination.currentPageNumber ? 'disabled' : '' }}"
+                    {% if page == pagination.currentPageNumber %} 
+                        aria-disabled="true" 
+                        disabled
+                    {% endif %}>
+                {{ page }}
+            </button>
+        {% endfor %}
+    </div>
+</div>

@@ -1,0 +1,13 @@
+<div class="pagination">
+    {% for page in 1..pagination.pageCount %}
+        <button type="button"
+                data-page="{{ page }}"
+                class="page-link {{ page == pagination.currentPageNumber ? 'active' : '' }} {{ page == pagination.currentPageNumber ? 'disabled' : '' }}"
+                {% if page == pagination.currentPageNumber %} 
+                    aria-disabled="true" 
+                    disabled
+                {% endif %}>
+            {{ page }}
+        </button>
+    {% endfor %}
+</div>

@@ -30,9 +30,7 @@
 {% endfor %}
 
 <div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
-
-    First Controller for project "Cuisine"
+    <h1>Admin Cuisine</h1>
 </div>
 <div class="example-wrapper">
     <h1>Admin</h1>
@@ -40,6 +38,7 @@
         <li><a href="{{ path('app_home') }}">Home</a></li>
         <li><a href="{{ path('admin') }}" class="restricted">Admin</a></li>
         <li><a href="{{ path('app_recipe') }}" data-turbo="false" class="restricted" id="list-link">Recipes</a></li>
+        <li><a href="{{ path('app_users') }}" data-turbo="false" class="restricted" id="list-link">Users</a></li>
         {# <li><a href="{{ path('ingredient') }}">Ingredients</a></li> #}
     </ul>
 {% endblock %}

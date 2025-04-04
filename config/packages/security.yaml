@@ -53,6 +53,7 @@ security:
         - { path: ^/recipe/update, roles: ROLE_ADMIN }
         - { path: ^/recipe/delete, roles: ROLE_ADMIN }
         - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/users/list, roles: ROLE_ADMIN }
 
         # Par défaut, tout le reste est accessible à tous
         - { path: ^/, roles: PUBLIC_ACCESS }

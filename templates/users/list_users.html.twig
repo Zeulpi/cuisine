@@ -1,0 +1,48 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des Users{% endblock %}
+
+{% block stylesheets %}
+        <link rel="stylesheet" href="{{ asset('styles/user_list.css') }}" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css">
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script defer>
+        const roleFilterPath = "{{ asset('js/userFilters/roleFilter.js') }}";
+        const roleActionsPath = "{{ asset('js/userActions/roleActions.js') }}";
+    </script>
+{% endblock %}
+
+{% block body %}
+
+{% for message in app.flashes('success') %}
+    <div class="alert alert-success">
+        {{ message }}
+    </div>
+{% endfor %}
+
+{% for type, messages in app.flashes %}
+    <div class="alert alert-{{ type }}">
+        {% for message in messages %}
+            {{ message }}
+        {% endfor %}
+    </div>
+{% endfor %}
+
+
+<div class="main-container">
+    <h2>Liste des users</h2>
+    <div id="user-table-container">
+        {% include 'users/_user_table.html.twig' %}
+    </div>
+</div>
+<div>
+    <a href="{{ path('app_home') }}">Home</a>
+</div>
+
+<script src="{{ asset('js/coreFilters.js') }}" type="module" ></script>
+{# <script type="module" src="{{ asset('js/userFilters/roleFilter.js') }}" ></script> #}
+{% endblock %}
+

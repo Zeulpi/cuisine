@@ -58,6 +58,12 @@ class AuthController extends AbstractController
         // Si l'authentification réussit, générer un token JWT
         $token = $this->jwtManager->create($user);  // Génération du token JWT
 
+        if (empty($user->getRoles())) {
+            return new JsonResponse([
+                'error' => "Votre compte n'est pas encore activé. Veuillez patienter.",
+            ], 403);
+        }
+
         // Retourner le token JWT dans la réponse
         return new JsonResponse(['message' => 'Connexion réussie', 'token' => $token]);
     }
@@ -90,6 +96,12 @@ class AuthController extends AbstractController
 
             $newToken = $jwtManager->create($user);
 
+            if (empty($user->getRoles())) {
+                return new JsonResponse([
+                    'error' => "Votre compte n'est pas encore activé. Veuillez patienter.",
+                ], 403);
+            }
+            
             return new JsonResponse(['token' => $newToken]);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Erreur lors du décodage du token', 'details' => $e->getMessage()], 401);

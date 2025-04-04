@@ -22,105 +22,116 @@ final class ApiRecipeController extends AbstractController{
     ): JsonResponse {
         $page = max(1, (int) $request->query->get('page', 1));
         $limit = max(1, (int) $request->query->get('limit', 10));
+        $sort = $request->query->get('sort');
         $searchTerm = $request->query->get('search');
         $tagFilter = $request->query->get('tags');
         $tagList = $tagFilter ? explode(',', $tagFilter) : [];
 
         $queryBuilder = $recipeRepository->createQueryBuilder('r')
-            ->leftJoin('r.recipeTags', 't')->addSelect('t')
-            ->orderBy('r.id', 'DESC');
+            ->leftJoin('r.recipeTags', 't')      // pour récupérer les tags à afficher
+            ->addSelect('t');
 
+        switch ($sort) {
+            case 'name_asc':
+                $queryBuilder->orderBy('r.recipeName', 'ASC');
+                break;
+            case 'name_desc':
+                $queryBuilder->orderBy('r.recipeName', 'DESC');
+                break;
+            case 'duration_asc':
+                // à implémenter plus tard
+                break;
+            case null:
+            default:
+                $queryBuilder->orderBy('r.recipeName', 'ASC');
+                break;
+        }
+            
+            
         $applyGroupBy = false;
-
+        // 🏷️ Filtrage par tags
         if (!empty($tagList)) {
-            $applyGroupBy = true;
-
+            $sub = $recipeRepository->createQueryBuilder('r2')
+                ->select('r2.id')
+                ->join('r2.recipeTags', 't2')
+                ->where('t2.tagName IN (:tags)')
+                ->groupBy('r2.id')
+                ->having('COUNT(DISTINCT t2.id) = :nbTags')
+                ->getDQL(); // ✅ on récupère la DQL pour la sous-requête
+        
             $queryBuilder
-                ->andWhere('t.name IN (:tags)')
+                ->andWhere($queryBuilder->expr()->in('r.id', $sub))
                 ->setParameter('tags', $tagList)
-                ->groupBy('r.id')
-                ->having('COUNT(DISTINCT t.id) = :nbTags')
                 ->setParameter('nbTags', count($tagList));
         }
-
-        if (!empty($searchTerm)) {
-            $queryBuilder
-                ->andWhere('r.recipeName LIKE :search')
-                ->setParameter('search', '%' . $searchTerm . '%');
-
-            // ⚠️ ajouter groupBy si la recherche + tag combinés
-            if (! $applyGroupBy && !empty($tagList)) {
-                $queryBuilder->groupBy('r.id');
-            }
-        }
-
 
         // 🔍 Filtrage par nom (search)
         if (!empty($searchTerm)) {
             $queryBuilder
                 ->andWhere('r.recipeName LIKE :search')
                 ->setParameter('search', '%' . $searchTerm . '%');
+
+            if (!$applyGroupBy && !empty($tagList)) {
+                $queryBuilder->groupBy('r.id');
+            }
         }
 
-        // 🏷️ Filtrage par tags (tous les tags doivent être présents)
-        if (!empty($tagList)) {
-            $queryBuilder
-                ->andWhere('t.name IN (:tags)')
-                ->setParameter('tags', $tagList)
-                ->having('COUNT(DISTINCT t.id) = :nbTags')
-                ->setParameter('nbTags', count($tagList));
+        try {
+            $pagination = $paginator->paginate(
+                $queryBuilder,
+                $page,
+                $limit,
+                ['useOutputWalkers' => true] // ✅ solution magique
+            );
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => true,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ], 500);
         }
-
-        // 🔄 (Prévu pour plus tard) Tri dynamique :
-        // Exemple futur ?sort=duration / ?sort=rating
-        // $sort = $request->query->get('sort');
-        // if ($sort === 'duration') {
-        //     $queryBuilder->orderBy('r.recipeDuration', 'ASC');
-        // }
-
-        $pagination = $paginator->paginate($queryBuilder, $page, $limit);
 
         $recipes = [];
         foreach ($pagination->getItems() as $recipe) {
-        $recipes[$recipe->getId()] = [
-            'name' => $recipe->getRecipeName(),
-            'image' => $recipe->getRecipeImg(),
-            'duration' => (function () use ($recipe) {
-                $steps = $recipe->getRecipeSteps()->toArray();
-                $totalDuration = 0;
-                $currentBlock = [];
+            $recipes[$recipe->getId()] = [
+                'name' => $recipe->getRecipeName(),
+                'image' => $recipe->getRecipeImg(),
+                'duration' => (function () use ($recipe) {
+                    $steps = $recipe->getRecipeSteps()->toArray();
+                    $totalDuration = 0;
+                    $currentBlock = [];
 
-                foreach ($steps as $index => $step) {
-                    $time = $step->getStepTime() ?? 0;
-                    $unit = strtolower($step->getStepTimeUnit() ?? 'minutes');
+                    foreach ($steps as $index => $step) {
+                        $time = $step->getStepTime() ?? 0;
+                        $unit = strtolower($step->getStepTimeUnit() ?? 'minutes');
 
-                    $durationInMinutes = match ($unit) {
-                        'heures', 'heure' => $time * 60,
-                        'secondes', 'seconde' => $time / 60,
-                        default => $time
-                    };
+                        $durationInMinutes = match ($unit) {
+                            'heures', 'heure' => $time * 60,
+                            'secondes', 'seconde' => $time / 60,
+                            default => $time
+                        };
 
-                    $currentBlock[] = $durationInMinutes;
-                    $nextStep = $steps[$index + 1] ?? null;
-                    $nextIsSimultaneous = $nextStep && ($nextStep->isStepSimult() ?? false);
+                        $currentBlock[] = $durationInMinutes;
+                        $nextStep = $steps[$index + 1] ?? null;
+                        $nextIsSimultaneous = $nextStep && ($nextStep->isStepSimult() ?? false);
 
-                    if (!$nextIsSimultaneous) {
-                        $totalDuration += max($currentBlock);
-                        $currentBlock = [];
+                        if (!$nextIsSimultaneous) {
+                            $totalDuration += max($currentBlock);
+                            $currentBlock = [];
+                        }
                     }
-                }
 
-                return [
-                    'value' => (int) round($totalDuration),
-                    'unit' => 'minutes'
-                ];
-            })(),
-            'tags' => array_map(fn($tag) => [
-                'name' => $tag->getTagName(),
-                'color' => $tag->getTagColor()
-            ], $recipe->getRecipeTags()->toArray()),
-        ];
-    }
+                    return [
+                        'value' => (int) round($totalDuration),
+                        'unit' => 'minutes'
+                    ];
+                })(),
+                'tags' => array_map(fn($tag) => [
+                    'name' => $tag->getTagName(),
+                    'color' => $tag->getTagColor()
+                ], $recipe->getRecipeTags()->toArray()),
+            ];
+        }
 
         return new JsonResponse([
             'recipes' => $recipes,
@@ -129,9 +140,11 @@ final class ApiRecipeController extends AbstractController{
                 'limit' => $limit,
                 'totalPages' => ceil($pagination->getTotalItemCount() / $limit),
                 'totalItems' => $pagination->getTotalItemCount(),
-            ]
+            ],
+            'debug_tagList' => $tagList, // tu peux retirer ça ensuite
         ]);
     }
+
     
     #[Route('/api/recipes/{id}', name: 'api_recipe_detail', methods: ['GET'])]
     public function getRecipeDetail(int $id, RecipeRepository $recipeRepository): JsonResponse
@@ -224,5 +237,18 @@ final class ApiRecipeController extends AbstractController{
         ];
 
         return new JsonResponse($data, JsonResponse::HTTP_OK);
+    }
+
+    #[Route('/api/tags', name: 'api_tag_list', methods: ['GET'])]
+    public function getTags(TagRepository $tagRepository): JsonResponse
+    {
+        $tags = $tagRepository->findAll();
+
+        $data = array_map(fn($tag) => [
+            'name' => $tag->getTagName(),
+            'color' => $tag->getTagColor(),
+        ], $tags);
+
+        return new JsonResponse($data);
     }
 }

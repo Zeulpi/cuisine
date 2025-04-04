@@ -13,7 +13,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;  // 
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 
-class UserUpdateController extends AbstractController
+class UserCreateController extends AbstractController
 {
     private $passwordHasher;
     private $entityManager;  // Déclaration de l'EntityManager
@@ -31,41 +31,36 @@ class UserUpdateController extends AbstractController
         $this->jwtEncoder = $jwtEncoder;
     }
 
-    #[Route('/api/user/update', name: 'api_user_update', methods: ['POST', 'GET'])]
-    public function userUpdate(Request $request)
+    #[Route('/api/user/register', name: 'api_user_register', methods: ['POST', 'GET'])]
+    public function userCreate(Request $request)
     {
         try {
             $alerts = [];
+
+            // Verification du CAPTCHA
+            $captchaToken = $request->request->get('captchaToken');
+            $captchaSecret = $this->getParameter('captcha_secret');
+            $verifyResponse = file_get_contents(
+                'https://www.google.com/recaptcha/api/siteverify?secret=' . $captchaSecret . '&response=' . $captchaToken
+            );
+            $responseData = json_decode($verifyResponse);
+            if (!$responseData->success) {
+                return new JsonResponse([
+                    'error' => 'Échec de la vérification du captcha. Veuillez réessayer.',
+                ], 400);
+            }
+
+            
             // Récupération des données JSON envoyées
             $data = json_decode($request->getContent(), true);
 
             $receivedData = [
-                "sentToken" => $request->request->get('token'),
                 "sentEmail" => $request->request->get('userEmail'),
                 "sentPassword" => $request->request->get('validatedPassword'),
                 "sentUserName" => $request->request->get('userName'),
             ];
 
-            try {
-                $payload = $this->jwtEncoder->decode($receivedData["sentToken"]);
-            } catch (\Exception $e) {
-                return new JsonResponse([
-                    'error' => 'Token invalide',
-                    'details' => $e->getMessage(),
-                ], 401);
-            }
-            // Trouver l'utilisateur par son email
-             $user = $this->entityManager->getRepository(User::class)->findOneByEmail($payload['email']);
-
-            // Verifier si le User existe
-            if (!$user) {
-                return new JsonResponse(['error' => 'Utilisateur non trouvé'], 404);
-            }
-
-            // Verifier le token pour s'assurer que c'est bien le user loggé qui modifie son compte
-            if (!$payload || $payload['email'] !== $user->getUserIdentifier()) {
-                return new JsonResponse(['error' => 'Token invalide ou utilisateur non autorisé'], 401);
-            }
+            $user = new User();
 
             // Si un nouveau mot de passe est envoyé, on le hash et on le met à jour
             if (!empty($receivedData["sentPassword"])) {
@@ -74,9 +69,9 @@ class UserUpdateController extends AbstractController
             }
 
             // Verification du mail recu
-            if ($receivedData['sentEmail'] !== $user->getEmail()) { // le sentEmail est différent de celui d'origine
+            if ($receivedData['sentEmail']) {
                 $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $receivedData['sentEmail']]); // on cherche si un autre utilisateur utilise deja le mail demandé
-                if ($existingUser && $existingUser->getId() !== $user->getId()) {
+                if ($existingUser) {
                     // L'email est déjà utilisé on prépare un message d'erreur
                     $alerts['email'] = "Cette adresse email est déjà utilisée par un autre utilisateur.";
                 } else {
@@ -86,10 +81,7 @@ class UserUpdateController extends AbstractController
             }
             
             // Vérification du username recu
-            if (
-                !empty($receivedData["sentUserName"]) &&
-                $receivedData["sentUserName"] !== $user->getUserName()
-              ) {
+            if (!empty($receivedData["sentUserName"])) {
                   $user->setUserName($receivedData["sentUserName"]);
               }
 
@@ -98,24 +90,21 @@ class UserUpdateController extends AbstractController
             if ($uploadedFile) {
                 $uploadDir = $this->getParameter('kernel.project_dir') . '/public/images/avatar';
                 $filename = uniqid('avatar_') . '.' . $uploadedFile->guessExtension();
-                $previousImage = $user->getUserImg();
                 try {
                     // Déplacement du nouveau fichier
                     $uploadedFile->move($uploadDir, $filename);
                     $user->setUserImg($filename);
-
-                    // 🧼 Suppression de l'ancien avatar (s'il y en a un)
-                    if (!empty($previousImage)) {
-                        $oldFile = $uploadDir . '/' . $previousImage;
-                        if (file_exists($oldFile)) {
-                            unlink($oldFile);
-                        }
-                    }
                 } catch (\Exception $e) {
                     $alerts['userImage'] = "Erreur lors de l’envoi de l’image.";
                 }
             }
 
+            if (!empty($alerts['email'])) {
+                return new JsonResponse([
+                    'alerts' => $alerts,
+                    'success' => false
+                ]);
+            }
 
             $this->entityManager->persist($user);
             $this->entityManager->flush();
@@ -124,9 +113,10 @@ class UserUpdateController extends AbstractController
             $newToken = $this->jwtManager->create($user);
 
             return new JsonResponse([
-                'message' => 'Utilisateur mis à jour avec succès',
-                'token' => $newToken,
+                'message' => 'Utilisateur Crée avec succes',
+                'email' => $receivedData["sentEmail"],
                 'alerts' => $alerts,
+                'success' => true,
             ]);
         } catch (\Throwable $e) {
             return new JsonResponse([
