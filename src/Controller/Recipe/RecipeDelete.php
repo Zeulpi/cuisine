@@ -31,6 +31,11 @@ final class RecipeDelete extends AbstractController{
     #[Route('/recipe/delete/{id}', name: 'recipe_delete', methods: ['POST'])]
     public function delete(Request $request, int $id, EntityManagerInterface $entityManager, CsrfTokenManagerInterface $csrfTokenManager, StepOperationRepository $stepOpRepo): Response
     {
+        if (!$this->isGranted('ROLE_ADMIN')) {
+            $this->addFlash('warning', 'Vous n\'avez pas les droits pour supprimer une recette.');
+            return $this->redirectToRoute('app_home');
+        }
+
         // Vérification du token CSRF
         $submittedToken = $request->request->get('_token');
         if (!$csrfTokenManager->isTokenValid(new CsrfToken('delete_recipe', $submittedToken))) {
@@ -73,7 +78,13 @@ final class RecipeDelete extends AbstractController{
         }
 
         // Supprimer la recette (les steps associés serront supprimés en cascade)
-        $entityManager->remove($recipe);
+        if ($this->isGranted('ROLE_ADMIN')) {
+            $entityManager->remove($recipe);
+        }
+        // Si l'utilisateur n'est pas admin, il ne peut pas supprimer la recette
+        else {
+            throw $this->createAccessDeniedException('Vous n\'avez pas les droits pour supprimer cette recette.');
+        }
         $entityManager->flush();
 
         // Message flash de suppression

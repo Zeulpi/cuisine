@@ -19,6 +19,11 @@ class UserRoleController extends AbstractController
         UserRepository $userRepository,
         EntityManagerInterface $entityManager
     ): JsonResponse {
+
+        if (!$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createAccessDeniedException();
+        }
+        
         $data = json_decode($request->getContent(), true);
         $userId = $data['userId'] ?? null;
         $action = $data['action'] ?? null;

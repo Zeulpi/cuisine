@@ -36,7 +36,15 @@ class AuthController extends AbstractController
         // Récupération des données JSON envoyées
         $data = json_decode($request->getContent(), true);
 
-        $email = $data['email'] ?? '';
+        if (!is_array($data) || !isset($data['email'], $data['password'])) {
+            return new JsonResponse(['error' => 'Identifiants invalides.'], 400);
+        }
+
+        $email = filter_var($data['email'], FILTER_VALIDATE_EMAIL);
+        if (!$email) {
+            return new JsonResponse(['error' => 'Email invalide'], 400);
+        }
+
         $password = $data['password'] ?? '';
 
         if (!$email || !$password) {

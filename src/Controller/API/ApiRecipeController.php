@@ -49,6 +49,10 @@ final class ApiRecipeController extends AbstractController{
             
             
         $applyGroupBy = false;
+        // 🔐 Validation des paramètres
+        if (!is_array($tagList) || array_filter($tagList, fn($tag) => !is_string($tag))) {
+            return new JsonResponse(['error' => 'Paramètres de tags invalides.'], 400);
+        }
         // 🏷️ Filtrage par tags
         if (!empty($tagList)) {
             $sub = $recipeRepository->createQueryBuilder('r2')
@@ -65,7 +69,11 @@ final class ApiRecipeController extends AbstractController{
                 ->setParameter('nbTags', count($tagList));
         }
 
+
         // 🔍 Filtrage par nom (search)
+        if (!is_string($searchTerm)) {
+            return new JsonResponse(['error' => 'Paramètre de recherche invalide.'], 400);
+        }
         if (!empty($searchTerm)) {
             $queryBuilder
                 ->andWhere('r.recipeName LIKE :search')

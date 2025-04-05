@@ -6,18 +6,18 @@ use App\Entity\User;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;  // Utilisation de la version moderne
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
-use Doctrine\ORM\EntityManagerInterface;  // Injection du EntityManager
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;  // Importation du service JWT
+use Doctrine\ORM\EntityManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 
 class UserCreateController extends AbstractController
 {
     private $passwordHasher;
-    private $entityManager;  // Déclaration de l'EntityManager
-    private $jwtManager;  // Déclaration du service JWT
+    private $entityManager;
+    private $jwtManager;
     private $serializer;
     private $jwtEncoder;
 
@@ -25,8 +25,8 @@ class UserCreateController extends AbstractController
     public function __construct(UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager, JWTTokenManagerInterface $jwtManager, SerializerInterface $serializer, JWTEncoderInterface $jwtEncoder)
     {
         $this->passwordHasher = $passwordHasher;
-        $this->entityManager = $entityManager;  // Attribution de l'EntityManager à la propriété
-        $this->jwtManager = $jwtManager;  // Attribution du service JWT à la propriété
+        $this->entityManager = $entityManager;
+        $this->jwtManager = $jwtManager;
         $this->serializer = $serializer;
         $this->jwtEncoder = $jwtEncoder;
     }
