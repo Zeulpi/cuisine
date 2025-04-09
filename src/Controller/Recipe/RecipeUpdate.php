@@ -180,7 +180,7 @@ final class RecipeUpdate extends AbstractController{
             // foreach ($existingSteps as $step) {
             //     $entityManager->refresh($step);
             // }
-            $selectedIngredientsJson = $request->request->get('selected-ingredients');
+            $selectedIngredientsJson = $request->request->all('recipe')['selectedIngredients'] ?? '[]';
             $selectedIngredients = json_decode($selectedIngredientsJson, true);
 
             $allSelectedOperationsJson = $request->request->get('all-selected-operations', '[]');
@@ -207,12 +207,15 @@ final class RecipeUpdate extends AbstractController{
             }
             dump('Steps soumis indexés : ', $submittedStepsIndexed);
 
-            if ($selectedIngredients) {
-                // Déterminer les ingrédients à supprimer
-                $ingredientsToRemove = array_diff($existingIngredients, $selectedIngredients);
-                // Déterminer les ingrédients à ajouter
-                $ingredientsToAdd = array_diff($selectedIngredients, $existingIngredients);
 
+            // Gestion des ingredients et des quantités
+            if ($selectedIngredients) {
+                $selectedIngredientIds = array_column($selectedIngredients, 'ingredientId');
+                // Déterminer les ingrédients à supprimer
+                $ingredientsToRemove = array_diff($existingIngredients, $selectedIngredientIds);
+                // Déterminer les ingrédients à ajouter
+                $ingredientsToAdd = array_diff($selectedIngredientIds, $existingIngredients);
+                
                 // Supprimer les ingrédients non sélectionnés
                 foreach ($ingredientsToRemove as $ingredientId) {
                     $ingredient = $ingredientRepository->find($ingredientId);
@@ -228,13 +231,16 @@ final class RecipeUpdate extends AbstractController{
                         $recipe->addRecipeIngredient($ingredient);
                     }
                 }
+                // Mettre à jour les quantités et unités
+                $recipe->setRecipeQuantities([]); // Réinitialiser pour repartir propre
+                foreach ($selectedIngredients as $ingredientData) {
+                    $ingredientId = $ingredientData['ingredientId'];
+                    $quantity = $ingredientData['quantity'];
+                    $unit = $ingredientData['unit'] ?? '';
+
+                    $recipe->addIngredientQuantity($ingredientId, $quantity, $unit); // Comme en création
+                }
             }
-
-            // dd($request->request->all());
-
-            $stepsToRemove = array_diff_key($existingSteps, array_flip($submittedStepIds));
-            $stepsToAdd = array_filter($submittedSteps, fn($step) => empty($step['id']));
-            $stepsToUpdate = [];
 
             // Récupérer les étapes après handleRequest()
             $steps = $recipe->getRecipeSteps();
@@ -258,10 +264,13 @@ final class RecipeUpdate extends AbstractController{
                 // dump("Mise à jour stepSimult pour Step ID: " . $step->getId() . " → " . ($step->isStepSimult() ? 'true' : 'false'));
             }
             
-            
+            $entityManager = $this->doctrine->getManager();
             $entityManager->persist($recipe);
             $entityManager->flush();
             
+            // Recharger les étapes après avoir enregistré la recette
+            $steps = $recipe->getRecipeSteps();
+
             //-----------------------//
             // Gestions des opérations
             //-----------------------//

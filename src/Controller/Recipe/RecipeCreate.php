@@ -101,7 +101,7 @@ final class RecipeCreate extends AbstractController{
                     foreach ($selectedIngredients as $ingredientData) {
                         $ingredientId = $ingredientData['ingredientId'];
                         $quantity = $ingredientData['quantity'];
-                        $unit = isset($ingredientData['unit']) ? $ingredientData['unit'] : ''; // Récupérer l'unité, ou vide si non spécifié
+                        $unit = $ingredientData['unit'] ?? '';
 
                         // Trouver l'ingrédient dans la base de données
                         $ingredient = $ingredientRepository->find($ingredientId);
@@ -114,7 +114,7 @@ final class RecipeCreate extends AbstractController{
                             $recipe_raw->addRecipeIngredient($ingredient);
                             
                             // Ajouter la quantité et l'unité associée à cet ingrédient
-                            $recipe_raw->addIngredientQuantity($ingredientId, $quantity, $unit); // Assurez-vous que cette méthode prend aussi l'unité en paramètre
+                            $recipe_raw->addIngredientQuantity($ingredientId, $quantity, $unit);
                         }
                     }
                 }

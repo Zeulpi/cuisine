@@ -241,6 +241,7 @@
     background-color: aliceblue;
     border: solid 1px mediumseagreen;
     border-radius: 5px;
+    padding: 2px;
 }
 .step-operation {
     box-sizing: border-box;
