@@ -15,7 +15,7 @@ use App\Repository\TagRepository;
 use Doctrine\ORM\EntityManager;
 
 final class ApiRecipeDetailController extends AbstractController{
-    #[Route('/api/recipes/{id}', name: 'api_recipe_detail', methods: ['GET'])]
+    // #[Route('/api/recipes/{id}', name: 'api_recipe_detail', methods: ['GET'])]
     public function getRecipeDetail(int $id, RecipeRepository $recipeRepository): JsonResponse
     {
         // Récupérer la recette avec ses relations en une seule requête

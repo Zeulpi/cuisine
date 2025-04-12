@@ -31,8 +31,8 @@ class UserCreateController extends AbstractController
         $this->jwtEncoder = $jwtEncoder;
     }
 
-    #[Route('/api/user/register', name: 'api_user_register', methods: ['POST', 'GET'])]
-    public function userCreate(Request $request)
+    // #[Route('/api/user/register', name: 'api_user_register', methods: ['POST'])]
+    public function userCreate(Request $request) : JsonResponse
     {
         try {
             $alerts = [];

@@ -20,6 +20,7 @@
                         </label>
                     </div>
                 </th>
+                <th>Planner</th>
             </tr>
         </thead>
         <tbody>
@@ -54,6 +55,9 @@
                             {# Cas rare : ROLE_ADMIN seul → pas de bouton #}
                             <span class="text-muted">Rôle invalide</span>
                         {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-danger planner-action" data-user-id="{{ user.id }}" data-action="reset">Reset Planner</button>
                     </td>
 
                 </tr>

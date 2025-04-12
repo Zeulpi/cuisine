@@ -8,10 +8,16 @@
     const roleActionsModule = await import(roleActionsPath);
     const roleActions = roleActionsModule.default;
     allActions.push(roleActions);
+    const plannerActionsModule = await import(plannerActionsPath);
+    const plannerActions = plannerActionsModule.default;
+    allActions.push(plannerActions);
 
     console.log('script Core chargé');
     allFilters.forEach(filter => {
         console.log("Filtre "+filter.filterName+" chargé");
+    });
+    allActions.forEach(action => {
+        console.log("Action "+action.actionsName+" chargé");
     });
     let filtersApplied = {};  // Les filtres déjà appliqués (serviront dans la requête finale)
     let filtersToApply = {};  // Les filtres sélectionnés mais non encore appliqués
@@ -26,8 +32,8 @@
         allFilters.forEach(filter => {
             filter.filterListen(filtersToApply, filtersApplied);
         });
-        allActions.forEach(actions =>{
-            actions.actionsListen(fetchWithFilters, initPage);
+        allActions.forEach(action =>{
+            action.actionsListen(fetchWithFilters, initPage);
         });
     }
     

@@ -69,6 +69,20 @@ final class UserListController extends AbstractController{
         // Pagination
         $pagination = $paginator->paginate($queryBuilder, $page, $limit);
 
+        // Vérifier si chaque utilisateur a des planners, sinon les initialiser
+        $entityManager = $this->doctrine->getManager();
+        foreach ($pagination->getItems() as $user) {
+            if (empty($user->getUserPlanners())) {
+                // Initialiser les planners si l'utilisateur n'en a pas
+                $user->setUserPlanners($user->initializePlanners());
+                // Sauvegarder l'utilisateur avec ses planners
+                $entityManager->persist($user);
+            }
+        }
+        // dd('fini');
+        // Sauvegarder tous les utilisateurs avec leurs planners en une seule requête
+        $entityManager->flush();
+
         // Si la requête est une requête Ajax, renvoyer uniquement le tableau
         if ($request->isXmlHttpRequest()) {
             // dd('requete asynchrone');

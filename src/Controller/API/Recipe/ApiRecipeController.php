@@ -14,7 +14,7 @@ use App\Entity\Tag;
 use App\Repository\TagRepository;
 
 final class ApiRecipeController extends AbstractController{
-    #[Route('/api/recipes', name: 'api_recipe_list', methods: ['GET'])]
+    // #[Route('/api/recipes', name: 'api_recipe_list', methods: ['GET'])]
     public function listRecipes(
         Request $request,
         RecipeRepository $recipeRepository,
@@ -22,9 +22,9 @@ final class ApiRecipeController extends AbstractController{
     ): JsonResponse {
         $page = max(1, (int) $request->query->get('page', 1));
         $limit = max(1, (int) $request->query->get('limit', 10));
-        $sort = $request->query->get('sort');
-        $searchTerm = $request->query->get('search');
-        $tagFilter = $request->query->get('tags');
+        $sort = $request->query->get('sort') ?? '';
+        $searchTerm = $request->query->get('search') ?? '';
+        $tagFilter = $request->query->get('tags') ?? '';
         $tagList = $tagFilter ? explode(',', $tagFilter) : [];
 
         $queryBuilder = $recipeRepository->createQueryBuilder('r')
@@ -153,7 +153,7 @@ final class ApiRecipeController extends AbstractController{
         ]);
     }
 
-    #[Route('/api/tags', name: 'api_tag_list', methods: ['GET'])]
+    // #[Route('/api/tags', name: 'api_tag_list', methods: ['GET'])]
     public function getTags(TagRepository $tagRepository): JsonResponse
     {
         $tags = $tagRepository->findAll();

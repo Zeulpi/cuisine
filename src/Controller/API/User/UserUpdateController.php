@@ -31,8 +31,8 @@ class UserUpdateController extends AbstractController
         $this->jwtEncoder = $jwtEncoder;
     }
 
-    #[Route('/api/user/update', name: 'api_user_update', methods: ['POST', 'GET'])]
-    public function userUpdate(Request $request)
+    // #[Route('/api/user/update', name: 'api_user_update', methods: ['POST'])]
+    public function userUpdate(Request $request) : JsonResponse
     {
         try {
             $alerts = [];

@@ -4,6 +4,7 @@
 namespace App\Controller\API\Auth;
 
 use App\Entity\User;
+use App\Service\LoginTracker;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,17 +21,24 @@ class AuthController extends AbstractController
     private $entityManager;  // Déclaration de l'EntityManager
     private $jwtManager;  // Déclaration du service JWT
     private $serializer;
+    private $loginTracker;
+
+    // Nombre maximum de tentatives
+    private const MAX_ATTEMPTS = 5;  
+    // Temps avant réinitialisation des tentatives (en secondes)
+    private const LOCK_TIME = 900;  // 15 minutes
 
     // Injection des services dans le constructeur
-    public function __construct(UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager, JWTTokenManagerInterface $jwtManager, SerializerInterface $serializer)
+    public function __construct(UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager, JWTTokenManagerInterface $jwtManager, SerializerInterface $serializer, LoginTracker $loginTracker)
     {
         $this->passwordHasher = $passwordHasher;
         $this->entityManager = $entityManager;  // Attribution de l'EntityManager à la propriété
         $this->jwtManager = $jwtManager;  // Attribution du service JWT à la propriété
         $this->serializer = $serializer;
+        $this->loginTracker = $loginTracker;
     }
 
-    #[Route('/api/login', name: 'api_login', methods: ['POST'])]
+    // #[Route('/api/login', name: 'api_login', methods: ['POST'])]
     public function login(Request $request)
     {
         // Récupération des données JSON envoyées
@@ -42,7 +50,7 @@ class AuthController extends AbstractController
 
         $email = filter_var($data['email'], FILTER_VALIDATE_EMAIL);
         if (!$email) {
-            return new JsonResponse(['error' => 'Email invalide'], 400);
+            return new JsonResponse(['error' => 'Format d\'email invalide'], 400);
         }
 
         $password = $data['password'] ?? '';
@@ -51,17 +59,25 @@ class AuthController extends AbstractController
             return new JsonResponse(['error' => 'Email et mot de passe requis'], 400);
         }
 
+
         // Trouver l'utilisateur par son email
         $user = $this->entityManager->getRepository(User::class)->findOneByEmail($email);
 
-        if (!$user) {
-            return new JsonResponse(['error' => 'Utilisateur non trouvé'], 404);
+        // Verifier les tentatives de connections et le délai de connection autorisé
+        $loginAccess =  $this->loginTracker->checkAccess($user);
+        if (!$loginAccess[0]) {
+            return new JsonResponse(['error' => $loginAccess[1]], 400);  // Si l'accès est bloqué, renvoyer un message d'erreur
         }
 
-        // Vérification du mot de passe avec l'encoder
-        if (!$this->passwordHasher->isPasswordValid($user, $password)) {
-            return new JsonResponse(['error' => 'Mot de passe incorrect'], 401);
+        // Vérification du mot de passe avec l'encoder + verifier si user existe
+        // Je mets les 2 verifs en 1 pour ne pas donner d'infos sur quel champ est invalide
+        if (!$user || !$this->passwordHasher->isPasswordValid($user, $password)) {
+            $this->loginTracker->failedAttempt();
+            return new JsonResponse(['error' => 'Identifiants invalides'], 401);
         }
+
+        // Si tout est OK, réinitialiser les tentatives échouées
+        $this->loginTracker->successAttempt();
 
         // Si l'authentification réussit, générer un token JWT
         $token = $this->jwtManager->create($user);  // Génération du token JWT

@@ -25,7 +25,7 @@ use Symfony\Component\HttpFoundation\Response;
 class AppAuthenticator extends AbstractLoginFormAuthenticator
 {
     use TargetPathTrait;
-
+ 
     public const LOGIN_ROUTE = 'login';
 
     public function __construct(
