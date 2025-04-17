@@ -102,6 +102,7 @@ final class ApiRecipeController extends AbstractController{
         $recipes = [];
         foreach ($pagination->getItems() as $recipe) {
             $recipes[$recipe->getId()] = [
+                'id' => $recipe->getId(),
                 'name' => $recipe->getRecipeName(),
                 'image' => $recipe->getRecipeImg(),
                 'duration' => (function () use ($recipe) {
@@ -138,6 +139,7 @@ final class ApiRecipeController extends AbstractController{
                     'name' => $tag->getTagName(),
                     'color' => $tag->getTagColor()
                 ], $recipe->getRecipeTags()->toArray()),
+                'portions' => $recipe->getRecipePortions(),
             ];
         }
 

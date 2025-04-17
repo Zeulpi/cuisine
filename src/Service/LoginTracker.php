@@ -86,11 +86,11 @@ class LoginTracker {
         $interval = $now->getTimestamp() - $lastAttempt->getTimestamp(); // Temps écoulé depuis la derniere tentative, en secondes
         $intervalRatio = floor($interval / ((self::TIMER) * $multi * max($userAttempts,1) )); // Combien de fois le temps écoulé dépasse le TIMER User
         $intervalRatio = min($intervalRatio, $this->user->getFailedAttempts()); // Si le Ratio dépasse le nombre de fails, limiter au nombre de fails
-        // $this->user->decreaseFailedAttempts(1); // Réduire les fails du User d'autant que son Ratio. Le user a attendu assez longtemps, on lui rend X tentatives
+        $this->user->decreaseFailedAttempts(1); // Réduire les fails du User d'autant que son Ratio. Le user a attendu assez longtemps, on lui rend X tentatives
 
-        // $this->entityManager->persist($this->user);
-        // $this->entityManager->flush();
-        // return $intervalRatio;
+        $this->entityManager->persist($this->user);
+        $this->entityManager->flush();
+        return $intervalRatio;
     }
 
     public function failedAttempt() // Appeler si La tentative de login a échoué

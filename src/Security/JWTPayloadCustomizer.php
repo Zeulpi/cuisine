@@ -22,6 +22,7 @@ class JWTPayloadCustomizer implements EventSubscriberInterface
         $payload = $event->getData();
         $payload['email'] = $user->getEmail(); // 👈 ajoute l'email au token
         $payload['userImage'] = $user->getUserImg();
+        $payload['planner'] = $user->getUserPlanners();
 
         $event->setData($payload);
     }

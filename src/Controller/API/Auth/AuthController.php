@@ -23,11 +23,6 @@ class AuthController extends AbstractController
     private $serializer;
     private $loginTracker;
 
-    // Nombre maximum de tentatives
-    private const MAX_ATTEMPTS = 5;  
-    // Temps avant réinitialisation des tentatives (en secondes)
-    private const LOCK_TIME = 900;  // 15 minutes
-
     // Injection des services dans le constructeur
     public function __construct(UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager, JWTTokenManagerInterface $jwtManager, SerializerInterface $serializer, LoginTracker $loginTracker)
     {
