@@ -64,12 +64,13 @@ class PlannerRecipes implements \JsonSerializable
 
         // On vérifie si le jour est valide
         if (property_exists($this, $mealKey)) {
-            $this->{$mealKey} = ['recipeId' => $recipeId, 'portions' => $portions];
+            $this->{$mealKey}[0] = $recipeId;
+            $this->{$mealKey}[1] = $portions;
         } else {
             throw new \Exception('Jour invalide pour un repas');
         }
     }
-    public function removeRecipe(string $day): void
+    public function removeMeal(string $day): void
     {
         $mealKey = $day; // Par exemple 'MonM' pour lundi midi
         // On vérifie si le jour est valide

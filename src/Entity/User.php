@@ -11,6 +11,7 @@ use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Model\Planner;
+use App\Model\PlannerRecipes;
 use DateTime;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
@@ -221,9 +222,49 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function getOnePlanner(int $index=0): ?Planner
+    {
+        $currentPlanner = $this->userPlanners[$index]; // Le planner actif est le premier dans le tableau
+        if (gettype($currentPlanner) == 'array') {
+            $planner = new Planner();
+            $planner->setStatus($currentPlanner['status']);
+            $planner->setWeekStart($currentPlanner['weekStart']);
+            $planner->setWeekEnd($currentPlanner['weekEnd']);
+
+            $plannerRecipes = new PlannerRecipes();  // Crée un objet PlannerRecipes
+
+            $recipesData = $currentPlanner['recipes']; // Les recettes pour le planner
+            foreach ($recipesData as $dayKey => $mealData) {
+                if (isset($mealData[0]) && isset($mealData[1])) {
+                    $day = $dayKey;
+                    
+                    $recipeId = $mealData[0]; // ID de la recette
+                    $portions = $mealData[1]; // Nombre de portions
+
+                    // Ajoute la recette au planner
+                    $plannerRecipes->addMeal($day, $recipeId, $portions);
+                }
+            }
+
+            $planner->setRecipes($plannerRecipes);
+
+            return $planner;
+        }
+        else {
+            return $currentPlanner;
+        }
+        return null;
+    }
+
     public function getUserPlanners(): ?array
     {
-        return $this->userPlanners;
+        $allConvertedPlanners = [];
+        $allPlanners = $this->userPlanners;
+        for ($i=0; $i < count($allPlanners); $i++) { 
+            array_push($allConvertedPlanners, $this->getOnePlanner($i));
+        }
+        
+        return $allConvertedPlanners;
     }
 
     public function setUserPlanners(?array $userPlanners): static
@@ -232,6 +273,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
+
+    public function setActivePlanner(Planner $planner): static
+    {
+        // Avant d'écrire, assure-toi que l'objet est sérialisé correctement
+        $this->userPlanners[0] = json_decode(json_encode($planner), true);
+        return $this;
+    }
+
 
     public function resetUserPlanners(): static
     {
@@ -268,6 +317,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         
         return $this;
     }
+
+    public function getAllRecipesIds(): array
+    {
+        $recipeIds = [];
+        
+        // Parcours chaque planner dans userPlanners
+        foreach ($this->userPlanners as $planner) {
+            // Vérifie si l'élément 'recipes' existe dans le planner
+            if (isset($planner['recipes'])) {
+                // Parcours chaque jour de la semaine
+                foreach ($planner['recipes'] as $day => $mealData) {
+                    // Vérifie si le repas contient une recette
+                    if (isset($mealData[0])) {
+                        $recipeIds[] = $mealData[0]; // Ajoute l'ID de la recette au tableau
+                    }
+                }
+            }
+        }
+
+        // Supprime les doublons dans le tableau
+        return array_unique($recipeIds);
+    }
+
+
 
     public function getLastAttempt(): ?\DateTimeInterface
     {

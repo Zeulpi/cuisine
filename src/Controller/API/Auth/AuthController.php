@@ -58,6 +58,7 @@ class AuthController extends AbstractController
         // Trouver l'utilisateur par son email
         $user = $this->entityManager->getRepository(User::class)->findOneByEmail($email);
 
+
         // Verifier les tentatives de connections et le délai de connection autorisé
         $loginAccess =  $this->loginTracker->checkAccess($user);
         if (!$loginAccess[0]) {
@@ -74,6 +75,7 @@ class AuthController extends AbstractController
         // Si tout est OK, réinitialiser les tentatives échouées
         $this->loginTracker->successAttempt();
 
+        
         // Si l'authentification réussit, générer un token JWT
         $token = $this->jwtManager->create($user);  // Génération du token JWT
 

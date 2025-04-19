@@ -83,6 +83,13 @@ class LoginTracker {
         $userAttempts = $this->user->getFailedAttempts();
         $multi = $userAttempts + 1;
 
+        if ($lastAttempt === null) {
+            return 0;  // Si c'est la première tentative, on ne fait rien
+        }
+        if ($userAttempts === 0) {
+            return 0; // Si le nombre de tentatives est déjà à 0, on ne fait rien
+        }
+        
         $interval = $now->getTimestamp() - $lastAttempt->getTimestamp(); // Temps écoulé depuis la derniere tentative, en secondes
         $intervalRatio = floor($interval / ((self::TIMER) * $multi * max($userAttempts,1) )); // Combien de fois le temps écoulé dépasse le TIMER User
         $intervalRatio = min($intervalRatio, $this->user->getFailedAttempts()); // Si le Ratio dépasse le nombre de fails, limiter au nombre de fails

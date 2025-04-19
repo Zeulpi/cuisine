@@ -65,4 +65,18 @@ class Planner implements \JsonSerializable
     {
         $this->recipes->addMeal($day, $recipeId, $portions); // On passe la requête à PlannerRecipes
     }
+    public function removeRecipe(string $day): void
+    {
+        $this->recipes->removeMeal($day); // On passe la requête à PlannerRecipes
+    }
+
+    public function setRecipes(PlannerRecipes $recipes): void
+    {
+        $this->recipes = $recipes;
+    }
+    
+    public function getRecipes(): PlannerRecipes
+    {
+        return $this->recipes;
+    }
 }

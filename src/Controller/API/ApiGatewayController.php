@@ -15,6 +15,7 @@ use App\Repository\RecipeRepository;
 use App\Repository\TagRepository;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Dom\Entity;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
 class ApiGatewayController extends AbstractController
@@ -28,6 +29,7 @@ class ApiGatewayController extends AbstractController
         RecipeRepository $recipeRepository,
         PaginatorInterface $paginator,
         TagRepository $tagRepository,
+        EntityManagerInterface $entityManager,
         )
     {
         $method = $request->getMethod();
@@ -68,7 +70,7 @@ class ApiGatewayController extends AbstractController
                         'request' => $request,
                         'jwtEncoder' => $this->container->get(JWTEncoderInterface::class),
                         'jwtManager' => $this->container->get(JWTTokenManagerInterface::class),
-                        'entityManager' =>$this->container->get(EntityManagerInterface::class),
+                        // 'entityManager' =>$this->container->get(EntityManagerInterface::class),
                     ]);
                 }
                 break;
@@ -80,17 +82,30 @@ class ApiGatewayController extends AbstractController
                 }
                 break;
             case 'user-update': // Mise à jour des informations de l'utilisateur
-                // if ($method === 'POST') {
+                if ($method === 'POST') {
                     return $this->forward('App\Controller\API\User\UserUpdateController::userUpdate', [
                         'request' => $request,
                     ]);
-                // }
+                }
                 break;
             case 'user-planner-addrecipe': // Ajouter une recette au planner
                 if ($method === 'POST') {
                     return $this->forward('App\Controller\API\User\Planner\UserApiPlannerController::addRecipeToPlanner', [
                         'request' => $request,
-                        'entityManager' =>$this->container->get(EntityManagerInterface::class),
+                    ]);
+                }
+                break;
+            case 'user-planner-get': // Ajouter une recette au planner
+                if ($method === 'GET') {
+                    return $this->forward('App\Controller\API\User\Planner\UserApiPlannerController::getPlanners', [
+                        'request' => $request,
+                    ]);
+                }
+                break;
+            case 'user-planner-deleterecipe': // Ajouter une recette au planner
+                if ($method === 'POST') {
+                    return $this->forward('App\Controller\API\User\Planner\UserApiPlannerController::removeRecipeFromPlanner', [
+                        'request' => $request,
                     ]);
                 }
                 break;
