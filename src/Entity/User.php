@@ -75,23 +75,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return [
             new Planner(
                 'active',
-                (new \DateTime())->modify('last monday')->format('Y-m-d'),
-                (new \DateTime())->modify('last monday')->modify('+6 days')->format('Y-m-d'),
+                (new \DateTime())->modify('last monday')->format('d-m-Y'),
+                (new \DateTime())->modify('last monday')->modify('+6 days')->format('d-m-Y'),
             ),
             new Planner(
                 'expired',
-                (new \DateTime())->modify('last monday -1 week')->format('Y-m-d'),
-                (new \DateTime())->modify('last monday -1 week')->modify('+6 days')->format('Y-m-d'),
+                (new \DateTime())->modify('last monday -1 week')->format('d-m-Y'),
+                (new \DateTime())->modify('last monday -1 week')->modify('+6 days')->format('d-m-Y'),
             ),
             new Planner(
                 'expired',
-                (new \DateTime())->modify('last monday -2 weeks')->format('Y-m-d'),
-                (new \DateTime())->modify('last monday -2 weeks')->modify('+6 days')->format('Y-m-d'),
+                (new \DateTime())->modify('last monday -2 weeks')->format('d-m-Y'),
+                (new \DateTime())->modify('last monday -2 weeks')->modify('+6 days')->format('d-m-Y'),
             ),
             new Planner(
                 'expired',
-                (new \DateTime())->modify('last monday -3 weeks')->format('Y-m-d'),
-                (new \DateTime())->modify('last monday -3 weeks')->modify('+6 days')->format('Y-m-d'),
+                (new \DateTime())->modify('last monday -3 weeks')->format('d-m-Y'),
+                (new \DateTime())->modify('last monday -3 weeks')->modify('+6 days')->format('d-m-Y'),
             )
         ];
     }
@@ -292,7 +292,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function shiftPlanners(): static
     {
         // Décaler tous les éléments d'un indice vers la droite
-        array_unshift($this->userPlanners, null); // Insérer un `null` à l'index 0, déplaçant tous les autres éléments.
+        array_unshift($this->userPlanners, new Planner()); // Insérer un nouveau Planner à l'index 0, déplaçant tous les autres éléments.
         return $this;
     }
     
@@ -304,13 +304,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
         return $this;
     }
-    public function addActivePlanner($planner): static
+    public function addActivePlanner(): static
     {
         // Étape 1 : Déplacer les éléments pour faire de la place au nouveau planner actif
         $this->shiftPlanners();
         
-        // Étape 2 : Ajouter le nouveau planner actif à l'index 0
-        $this->userPlanners[0] = $planner;
+        // Étape 2 : Expirer le planner actif précédent
+        $this->userPlanners[1]->setStatus('expired'); // Marquer le planner actif précédent comme expiré
         
         // Étape 3 : Supprimer le planner expiré le plus ancien si nécessaire
         $this->removeOldestPlanner();
@@ -324,6 +324,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         
         // Parcours chaque planner dans userPlanners
         foreach ($this->userPlanners as $planner) {
+            $planner = json_decode(json_encode($planner), true); // Convertit l'objet Planner en tableau associatif
             // Vérifie si l'élément 'recipes' existe dans le planner
             if (isset($planner['recipes'])) {
                 // Parcours chaque jour de la semaine

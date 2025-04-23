@@ -109,6 +109,13 @@ class ApiGatewayController extends AbstractController
                     ]);
                 }
                 break;
+            case 'user-shopping-get': // Ajouter une recette au planner
+                if ($method === 'POST') {
+                    return $this->forward('App\Controller\API\User\Planner\UserApiPlannerController::getShopping', [
+                        'request' => $request,
+                    ]);
+                }
+                break;
             default:
                 return new JsonResponse(['error' => 'Action inconnue'], 400);
         }

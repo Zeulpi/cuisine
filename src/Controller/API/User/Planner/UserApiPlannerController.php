@@ -4,6 +4,8 @@ namespace App\Controller\API\User\Planner;
 
 use App\Entity\User;
 use App\Model\Planner;
+use App\Entity\Recipe;
+use App\Entity\Ingredient;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -91,13 +93,9 @@ class UserApiPlannerController extends AbstractController
             $entityManager->persist($user);
             $entityManager->flush();
             
-
             // Raffraichir $user et générer un nouveau token
             $user = $this->entityManager->getRepository(User::class)->findOneByEmail($payload['email']);
             $newToken = $this->jwtManager->create($user);
-
-
-            
 
             $allRecipeIds = $user->getAllRecipesIds();
             // return new JsonResponse(['message' => 'Test', 'token' => $newToken, 'planner' => $recipes]);
@@ -171,8 +169,8 @@ class UserApiPlannerController extends AbstractController
     {
         try {// Récupération des données JSON envoyées
             $data = json_decode($request->getContent(), true);
-
             $sentToken = $request->query->get('token');
+            $updatedExpired = false;
 
 
             if (!$sentToken) {
@@ -198,12 +196,20 @@ class UserApiPlannerController extends AbstractController
             if (!$payload || $payload['email'] !== $user->getUserIdentifier()) {
                 return new JsonResponse(['error' => 'Token invalide ou utilisateur non autorisé'], 401);
             }
-            
+
             $allPlanners = $user->getUserPlanners();
+            $user->setUserPlanners($allPlanners);
+
+            // Vérification de l'expiration du planner actuel
+            $newWeek = (new \DateTime())->modify('last monday')->modify('+6 days')->format('d-m-Y');
+            if ($allPlanners[0]->getWeekEnd() < $newWeek) {
+                $user->addActivePlanner(); // Créer un nouveau planner actif
+                $updatedExpired = true; // Indicquer qu'un nouveau planner a été crée pour remplacer le précédent expiré
+            }
 
             // Sauvegarder les changements
-            // $entityManager->persist($user);
-            // $entityManager->flush();
+            $entityManager->persist($user);
+            $entityManager->flush();
             
 
             // Raffraichir $user et générer un nouveau token
@@ -266,7 +272,7 @@ class UserApiPlannerController extends AbstractController
             }
 
             // Retourner le token JWT dans la réponse + la liste des recettes du planner
-            return new JsonResponse(['message' => 'Recupération des recette', 'token' => $newToken, 'recipes' => $recipes]);
+            return new JsonResponse(['message' => 'Recupération des recette', 'token' => $newToken, 'recipes' => $recipes, 'updatedExpired' => $updatedExpired]);
 
         } catch (\Throwable $e) {
             return new JsonResponse([
@@ -396,4 +402,90 @@ class UserApiPlannerController extends AbstractController
             ], 500);
         }
     }
+
+    public function getShopping(Request $request, EntityManagerInterface $entityManager) : JsonResponse
+    {
+        try {
+            // Récupérer les données envoyées
+            $data = json_decode($request->getContent(), true);
+            $sentToken = $data['token'] ?? null;
+            $sentRecipes = $data['recipes'] ?? null;
+
+            if (!$sentToken || !$sentRecipes) {
+                return new JsonResponse(['error' => 'Token or recipes missing'], JsonResponse::HTTP_BAD_REQUEST);
+            }
+
+            // Requête pour récupérer les recettes demandées dans sentRecipes
+            $queryBuilder = $entityManager->createQueryBuilder();
+
+            $queryBuilder->select('r')
+                ->from(Recipe::class, 'r')
+                ->where($queryBuilder->expr()->in('r.id', array_keys($sentRecipes))); // Filtrer les recettes par ID
+
+            $recipes = $queryBuilder->getQuery()->getResult(); // Exécuter la requête et récupérer les résultats
+
+            // Initialiser un tableau pour stocker les ingrédients
+            $ingredientsData = [];
+
+            // Parcourir les recettes récupérées
+            foreach ($recipes as $recipe) {
+                // Récupérer les informations de portions et de quantités
+                $recipePortions = $recipe->getRecipePortions(); // Nombre de portions pour la recette
+                $recipeQuantities = $recipe->getRecipeQuantities(); // Quantités des ingrédients pour la recette (champ JSON)
+
+                // Pour chaque ingrédient dans recipeQuantities, calculer la quantité ajustée
+                foreach ($recipeQuantities as $ingredientId => $data) {
+                    $ingredient = $entityManager->getRepository(Ingredient::class)->find($ingredientId); // Récupérer l'ingrédient par son ID
+                    $ingredientName = $ingredient ? $ingredient->getIngredientName() : 'Unknown'; // Nom de l'ingrédient, avec un fallback
+
+                    // Quantité initiale et unité
+                    $ingredientQuantity = $data['quantity'];
+                    $ingredientUnit = $data['unit'] ?? 'unit'; // Valeur par défaut pour l'unité
+
+                    // Ajuster la quantité en fonction des portions demandées
+                    $requestedPortions = $sentRecipes[$recipe->getId()];
+                    $adjustedQuantity = ($ingredientQuantity * $requestedPortions) / $recipePortions;
+
+                    // Ajouter ou mettre à jour la quantité pour l'unité correspondante
+                    if (isset($ingredientsData[$ingredientName])) {
+                        // Vérifier si l'unité existe déjà pour cet ingrédient
+                        $foundUnit = false;
+                        foreach ($ingredientsData[$ingredientName]['quantities'] as &$quantObj) {
+                            if ($quantObj['unit'] === $ingredientUnit) {
+                                // Si l'unité existe déjà, on ajoute la quantité
+                                $quantObj['quantity'] += $adjustedQuantity;
+                                $foundUnit = true;
+                                break;
+                            }
+                        }
+
+                        // Si l'unité n'existe pas encore, on l'ajoute
+                        if (!$foundUnit) {
+                            $ingredientsData[$ingredientName]['quantities'][] = [
+                                'quantity' => $adjustedQuantity,
+                                'unit' => $ingredientUnit
+                            ];
+                        }
+                    } else {
+                        // Si l'ingrédient n'existe pas encore, on le crée
+                        $ingredientsData[$ingredientName] = [
+                            'quantities' => [
+                                [
+                                    'quantity' => $adjustedQuantity,
+                                    'unit' => $ingredientUnit
+                                ]
+                            ]
+                        ];
+                    }
+                }
+            }
+
+            // Retourner les résultats sous forme de JSON
+            return new JsonResponse(['message' => 'Liste récupérée', 'ingredients' => $ingredientsData]);
+            
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => $e->getMessage()], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

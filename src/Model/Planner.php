@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Model;
+use DateTime;
 
 use App\Model\PlannerRecipes;
 
@@ -13,9 +14,9 @@ class Planner implements \JsonSerializable
 
     public function __construct(string $status = '', string $weekStart = '', string $weekEnd = '')
     {
-        $this->status = $status;
-        $this->weekStart = $weekStart;
-        $this->weekEnd = $weekEnd;
+        $this->status = $status ?: 'active';
+        $this->weekStart = $weekStart ?: (new \DateTime())->modify('last monday')->format('d-m-Y');
+        $this->weekEnd = $weekEnd ?: (new \DateTime())->modify('last monday')->modify('+6 days')->format('d-m-Y');
         $this->recipes = new PlannerRecipes();
     }
 
