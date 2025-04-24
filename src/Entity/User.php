@@ -74,14 +74,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         // Créer les planners avec les dates appropriées
         return [
             new Planner(
+                'future',
+                (new \DateTime())->modify('last monday +1 week')->format('d-m-Y'),
+                (new \DateTime())->modify('last monday +1 week')->modify('+6 days')->format('d-m-Y'),
+            ),
+            new Planner(
                 'active',
                 (new \DateTime())->modify('last monday')->format('d-m-Y'),
                 (new \DateTime())->modify('last monday')->modify('+6 days')->format('d-m-Y'),
-            ),
-            new Planner(
-                'expired',
-                (new \DateTime())->modify('last monday -1 week')->format('d-m-Y'),
-                (new \DateTime())->modify('last monday -1 week')->modify('+6 days')->format('d-m-Y'),
             ),
             new Planner(
                 'expired',
@@ -274,10 +274,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function setActivePlanner(Planner $planner): static
+    public function setActivePlanner(Planner $planner, int $index): static
     {
         // Avant d'écrire, assure-toi que l'objet est sérialisé correctement
-        $this->userPlanners[0] = json_decode(json_encode($planner), true);
+        $this->userPlanners[$index] = json_decode(json_encode($planner), true);
         return $this;
     }
 
@@ -292,7 +292,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function shiftPlanners(): static
     {
         // Décaler tous les éléments d'un indice vers la droite
-        array_unshift($this->userPlanners, new Planner()); // Insérer un nouveau Planner à l'index 0, déplaçant tous les autres éléments.
+        array_unshift($this->userPlanners, new Planner('future')); // Insérer un nouveau Planner à l'index 0, déplaçant tous les autres éléments.
         return $this;
     }
     
@@ -310,7 +310,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->shiftPlanners();
         
         // Étape 2 : Expirer le planner actif précédent
-        $this->userPlanners[1]->setStatus('expired'); // Marquer le planner actif précédent comme expiré
+        $this->userPlanners[1]->setStatus('active'); // Marquer le planner actif précédent comme expiré
+        $this->userPlanners[2]->setStatus('expired'); // Marquer le planner actif précédent comme expiré
         
         // Étape 3 : Supprimer le planner expiré le plus ancien si nécessaire
         $this->removeOldestPlanner();

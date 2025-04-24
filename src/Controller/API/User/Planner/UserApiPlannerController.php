@@ -42,6 +42,7 @@ class UserApiPlannerController extends AbstractController
 
             $receivedData = [
                 "sentToken" => $data['token'],
+                "sentIndex" => $data['index'],
                 "sentDay" => $data['day'],
                 "sentRecipeId" => $data['recipeId'],
                 "sentPortions" => $data['portions'],
@@ -49,6 +50,10 @@ class UserApiPlannerController extends AbstractController
 
             if (!$receivedData['sentToken'] || !$receivedData['sentDay'] || !$receivedData['sentRecipeId'] || !$receivedData['sentPortions']) {
                 return new JsonResponse(['success' => false, 'message' => 'Paramètres manquants'], 400);
+            }
+
+            if (!is_int($receivedData['sentIndex']) || $receivedData['sentIndex'] < 0 || $receivedData['sentIndex'] > 3) {
+                return new JsonResponse(['error' => 'Index planner invalide'], 400);
             }
 
             if (!is_int($receivedData['sentRecipeId']) || $receivedData['sentRecipeId'] <= 0) {
@@ -81,13 +86,14 @@ class UserApiPlannerController extends AbstractController
             
             
             // Récupérer le planner actif
-            $planner = $user->getOnePlanner(0);
+            $planner = $user->getOnePlanner(($receivedData['sentIndex']));
             
+
             // Ajouter ou mettre à jour la recette du jour spécifié
             $planner->addRecipe(($receivedData['sentDay']), ($receivedData['sentRecipeId']), ($receivedData['sentPortions']));
 
             // Placer la recette mise à jour dans le tableau des planners de l'utilisateur sans écraser les autres
-            $user->setActivePlanner($planner);
+            $user->setActivePlanner($planner, ($receivedData['sentIndex']));
 
             // Sauvegarder les changements
             $entityManager->persist($user);
@@ -202,7 +208,7 @@ class UserApiPlannerController extends AbstractController
 
             // Vérification de l'expiration du planner actuel
             $newWeek = (new \DateTime())->modify('last monday')->modify('+6 days')->format('d-m-Y');
-            if ($allPlanners[0]->getWeekEnd() < $newWeek) {
+            if ($allPlanners[1]->getWeekEnd() < $newWeek) {
                 $user->addActivePlanner(); // Créer un nouveau planner actif
                 $updatedExpired = true; // Indicquer qu'un nouveau planner a été crée pour remplacer le précédent expiré
             }
@@ -291,11 +297,16 @@ class UserApiPlannerController extends AbstractController
 
             $receivedData = [
                 "sentToken" => $data['token'],
+                "sentIndex" => $data['index'],
                 "sentDay" => $data['day'],
             ];
 
-            if (!$receivedData['sentToken'] || !$receivedData['sentDay'] ) {
+            if (!$receivedData['sentToken'] ||  !$receivedData['sentDay'] ) {
                 return new JsonResponse(['success' => false, 'message' => 'Paramètres manquants'], 400);
+            }
+
+            if (!is_int($receivedData['sentIndex']) || $receivedData['sentIndex'] > 3 || $receivedData['sentIndex'] < 0) {
+                return new JsonResponse(['success' => false, 'message' => 'Index planner invalide'], 400);
             }
 
             try {
@@ -320,7 +331,7 @@ class UserApiPlannerController extends AbstractController
             
             
             // Récupérer le planner actif
-            $planner = $user->getOnePlanner(0);
+            $planner = $user->getOnePlanner(($receivedData['sentIndex']));
             
             // return new JsonResponse(['message' => 'Recette ajoutée au planner', 'token' => 'token', 'day' => $receivedData['sentDay']]);
 
@@ -328,7 +339,7 @@ class UserApiPlannerController extends AbstractController
             $planner->removeRecipe(($receivedData['sentDay']));
 
             // Placer la recette mise à jour dans le tableau des planners de l'utilisateur sans écraser les autres
-            $user->setActivePlanner($planner);
+            $user->setActivePlanner($planner, $receivedData['sentIndex']);
 
             // Sauvegarder les changements
             $entityManager->persist($user);
