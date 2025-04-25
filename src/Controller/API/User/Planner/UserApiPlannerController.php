@@ -277,8 +277,10 @@ class UserApiPlannerController extends AbstractController
                 ];
             }
 
+            $serverTime = (new \DateTime())->format('d-m-Y');
+
             // Retourner le token JWT dans la réponse + la liste des recettes du planner
-            return new JsonResponse(['message' => 'Recupération des recette', 'token' => $newToken, 'recipes' => $recipes, 'updatedExpired' => $updatedExpired]);
+            return new JsonResponse(['message' => 'Recupération des recettes', 'token' => $newToken, 'recipes' => $recipes, 'updatedExpired' => $updatedExpired, 'serverTime' => $serverTime]);
 
         } catch (\Throwable $e) {
             return new JsonResponse([

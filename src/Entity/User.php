@@ -85,13 +85,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             ),
             new Planner(
                 'expired',
-                (new \DateTime())->modify('last monday -2 weeks')->format('d-m-Y'),
-                (new \DateTime())->modify('last monday -2 weeks')->modify('+6 days')->format('d-m-Y'),
+                (new \DateTime())->modify('last monday -1 weeks')->format('d-m-Y'),
+                (new \DateTime())->modify('last monday -1 weeks')->modify('+6 days')->format('d-m-Y'),
             ),
             new Planner(
                 'expired',
-                (new \DateTime())->modify('last monday -3 weeks')->format('d-m-Y'),
-                (new \DateTime())->modify('last monday -3 weeks')->modify('+6 days')->format('d-m-Y'),
+                (new \DateTime())->modify('last monday -2 weeks')->format('d-m-Y'),
+                (new \DateTime())->modify('last monday -2 weeks')->modify('+6 days')->format('d-m-Y'),
             )
         ];
     }
