@@ -85,8 +85,10 @@ class AuthController extends AbstractController
             ], 403);
         }
 
+        $serverTime = (new \DateTime())->format('d-m-Y');
+
         // Retourner le token JWT dans la réponse
-        return new JsonResponse(['message' => 'Connexion réussie', 'token' => $token]);
+        return new JsonResponse(['message' => 'Connexion réussie', 'token' => $token, 'serverTime' => $serverTime]);
     }
 
     #[Route('/api/user/refresh', name: 'api_refresh', methods: ['POST'])]
@@ -123,7 +125,9 @@ class AuthController extends AbstractController
                 ], 403);
             }
             
-            return new JsonResponse(['token' => $newToken]);
+            $serverTime = (new \DateTime())->format('d-m-Y');
+
+            return new JsonResponse(['token' => $newToken, 'serverTime' => $serverTime]);
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Erreur lors du décodage du token', 'details' => $e->getMessage()], 401);
         }
