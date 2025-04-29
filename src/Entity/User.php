@@ -75,23 +75,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return [
             new Planner(
                 'future',
-                (new \DateTime())->modify('last monday +1 week')->format('d-m-Y'),
-                (new \DateTime())->modify('last monday +1 week')->modify('+6 days')->format('d-m-Y'),
+                (new \DateTime())->modify('this week monday')->modify('+1 week')->format('d-m-Y'),
+                (new \DateTime())->modify('this week monday')->modify('+1 week')->modify('+6 days')->format('d-m-Y'),
             ),
             new Planner(
                 'active',
-                (new \DateTime())->modify('last monday')->format('d-m-Y'),
-                (new \DateTime())->modify('last monday')->modify('+6 days')->format('d-m-Y'),
+                (new \DateTime())->modify('this week monday')->format('d-m-Y'),
+                (new \DateTime())->modify('this week monday')->modify('+6 days')->format('d-m-Y'),
             ),
             new Planner(
                 'expired',
-                (new \DateTime())->modify('last monday -1 weeks')->format('d-m-Y'),
-                (new \DateTime())->modify('last monday -1 weeks')->modify('+6 days')->format('d-m-Y'),
+                (new \DateTime())->modify('this week monday')->modify('-1 weeks')->format('d-m-Y'),
+                (new \DateTime())->modify('this week monday')->modify('-1 weeks')->modify('+6 days')->format('d-m-Y'),
             ),
             new Planner(
                 'expired',
-                (new \DateTime())->modify('last monday -2 weeks')->format('d-m-Y'),
-                (new \DateTime())->modify('last monday -2 weeks')->modify('+6 days')->format('d-m-Y'),
+                (new \DateTime())->modify('this week monday')->modify('-2 weeks')->format('d-m-Y'),
+                (new \DateTime())->modify('this week monday')->modify('-2 weeks')->modify('+6 days')->format('d-m-Y'),
             )
         ];
     }
@@ -224,7 +224,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getOnePlanner(int $index=0): ?Planner
     {
-        $currentPlanner = $this->userPlanners[$index]; // Le planner actif est le premier dans le tableau
+        $currentPlanner = $this->userPlanners[$index]; // Le planner actif est a l'index 1, 0 pour la semaine prochaine
         if (gettype($currentPlanner) == 'array') {
             $planner = new Planner();
             $planner->setStatus($currentPlanner['status']);
@@ -264,6 +264,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             array_push($allConvertedPlanners, $this->getOnePlanner($i));
         }
         
+        $this->userPlanners = $allConvertedPlanners;
+
         return $allConvertedPlanners;
     }
 
@@ -292,7 +294,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function shiftPlanners(): static
     {
         // Décaler tous les éléments d'un indice vers la droite
-        array_unshift($this->userPlanners, new Planner('future')); // Insérer un nouveau Planner à l'index 0, déplaçant tous les autres éléments.
+        array_unshift(
+            $this->userPlanners,
+                new Planner('future',
+                (new \DateTime())->modify('this week monday')->modify('+1 week')->format('d-m-Y'),
+                (new \DateTime())->modify('this week monday')->modify('+1 week')->modify('+6 days')->format('d-m-Y')
+            ) // Insérer un nouveau Planner à l'index 0, déplaçant tous les autres éléments.
+        );
         return $this;
     }
     
@@ -310,8 +318,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->shiftPlanners();
         
         // Étape 2 : Expirer le planner actif précédent
-        $this->userPlanners[1]->setStatus('active'); // Marquer le planner actif précédent comme expiré
-        $this->userPlanners[2]->setStatus('expired'); // Marquer le planner actif précédent comme expiré
+        $this->userPlanners[1]->setStatus('active'); // Marquer l'ancien planner 'future' comme 'active'
+        $this->userPlanners[2]->setStatus('expired'); // Marquer le planner 'active' précédent comme 'expired'
         
         // Étape 3 : Supprimer le planner expiré le plus ancien si nécessaire
         $this->removeOldestPlanner();
@@ -342,6 +350,33 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return array_unique($recipeIds);
     }
 
+    public function updatePlanners(): bool {
+        $allPlanners = $this->getUserPlanners();
+        $this->setUserPlanners($allPlanners);
+        
+        $didUpdate = false;
+
+        $serverTime = new \DateTime('now'); // Récuperer l'heure actuelle du server
+        $plannerDateEnd = \DateTime::createFromFormat('d-m-Y', $this->getOnePlanner(1)->getWeekEnd());
+        $plannerDateEnd->setTime(23, 59, 59, 999999); // Convertir la date de fin de planner[1] au bon format
+
+        if ($plannerDateEnd <= $serverTime) { // Verifier si la date actuelle dépasse l'expiration de planner[1]
+            $this->addActivePlanner(); // Créer un nouveau planner actif
+            $didUpdate = true; // Indiquer qu'un nouveau planner a été crée pour remplacer le précédent expiré
+        }
+
+        // Recommencer l'opération une 2e fois, au cas ou l'ancien planner 'future' est lui aussi expiré
+        if ($didUpdate == true) {
+            $plannerDateEnd = \DateTime::createFromFormat('d-m-Y', $this->getOnePlanner(1)->getWeekEnd());
+            $plannerDateEnd->setTime(23, 59, 59, 999999); // Convertir la date de fin de planner[1] au bon format
+
+            if ($plannerDateEnd <= $serverTime) { // Verifier si la date actuelle dépasse l'expiration de planner[1]
+                $this->addActivePlanner(); // Créer un nouveau planner actif
+            }
+        }
+
+        return $didUpdate;
+    }
 
 
     public function getLastAttempt(): ?\DateTimeInterface

@@ -58,6 +58,11 @@ class AuthController extends AbstractController
         // Trouver l'utilisateur par son email
         $user = $this->entityManager->getRepository(User::class)->findOneByEmail($email);
 
+        // Vérification du mot de passe avec l'encoder + verifier si user existe
+        // Je mets les 2 verifs en 1 pour ne pas donner d'infos sur quel champ est invalide
+        if (!$user) {
+            return new JsonResponse(['error' => 'Identifiants invalides'], 401);
+        }
 
         // Verifier les tentatives de connections et le délai de connection autorisé
         $loginAccess =  $this->loginTracker->checkAccess($user);

@@ -176,7 +176,8 @@ class UserApiPlannerController extends AbstractController
         try {// Récupération des données JSON envoyées
             $data = json_decode($request->getContent(), true);
             $sentToken = $request->query->get('token');
-            $updatedExpired = false;
+            $didPlannerUpdate = false;
+            $serverTime = (new \DateTime())->format('d-m-Y'); // Récuperer l'heure actuelle du server
 
 
             if (!$sentToken) {
@@ -203,17 +204,11 @@ class UserApiPlannerController extends AbstractController
                 return new JsonResponse(['error' => 'Token invalide ou utilisateur non autorisé'], 401);
             }
 
-            $allPlanners = $user->getUserPlanners();
-            $user->setUserPlanners($allPlanners);
+            $didPlannerUpdate = $user->updatePlanners(); // Vérifier et mettre a jour les planners expirés (0 et 1)
 
-            // Vérification de l'expiration du planner actuel
-            $newWeek = (new \DateTime())->modify('last monday')->modify('+6 days')->format('d-m-Y');
-            if ($allPlanners[1]->getWeekEnd() < $newWeek) {
-                $user->addActivePlanner(); // Créer un nouveau planner actif
-                $updatedExpired = true; // Indicquer qu'un nouveau planner a été crée pour remplacer le précédent expiré
-            }
+            // return new JsonResponse(['message' => 'return test', 'planner updated ? ' => $didPlannerUpdate], 200);
 
-            // Sauvegarder les changements
+            // Sauvegarder les changements des planners expirés / mis a jour
             $entityManager->persist($user);
             $entityManager->flush();
             
@@ -277,10 +272,9 @@ class UserApiPlannerController extends AbstractController
                 ];
             }
 
-            $serverTime = (new \DateTime())->format('d-m-Y');
 
             // Retourner le token JWT dans la réponse + la liste des recettes du planner
-            return new JsonResponse(['message' => 'Recupération des recettes', 'token' => $newToken, 'recipes' => $recipes, 'updatedExpired' => $updatedExpired, 'serverTime' => $serverTime]);
+            return new JsonResponse(['message' => 'Recupération des recettes', 'token' => $newToken, 'recipes' => $recipes, 'updatedExpired' => $didPlannerUpdate, 'serverTime' => $serverTime]);
 
         } catch (\Throwable $e) {
             return new JsonResponse([
