@@ -31,7 +31,7 @@ class UserCrudController extends AbstractCrudController
     
     public function configureFields(string $pageName): iterable
     {
-        $roles = ['ROLE_ADMIN', 'ROLE_USER'];
+        $roles = ['ROLE_ADMIN', 'ROLE_CREATOR', 'ROLE_USER'];
         $fields = [
             IdField::new('id')->hideOnForm(),
             EmailField::new('email'),

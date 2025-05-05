@@ -39,6 +39,11 @@ security:
             # https://symfony.com/doc/current/security/impersonating_user.html
             # switch_user: true
 
+    # Roels hierarchy
+    role_hierarchy:
+        ROLE_CREATOR: [ROLE_CREATOR, ROLE_USER]
+        ROLE_ADMIN: [ROLE_CREATOR, ROLE_ADMIN]
+
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
@@ -47,12 +52,12 @@ security:
         - { path: ^/logout, roles: PUBLIC_ACCESS }
 
         # 🔒 Protège la page de lecture (liste des recettes)
-        - { path: ^/recipe$, roles: PUBLIC_ACCESS }
+        - { path: ^/recipe$, roles: ROLE_CREATOR }
+        - { path: ^/recipe/new, roles: ROLE_CREATOR }
+        - { path: ^/recipe/update, roles: ROLE_CREATOR }
         # Protège la création et l'édition de recettes
-        - { path: ^/recipe/new, roles: ROLE_ADMIN }
-        - { path: ^/recipe/update, roles: ROLE_ADMIN }
         - { path: ^/recipe/delete, roles: ROLE_ADMIN }
-        - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/admin, roles: ROLE_CREATOR }
         - { path: ^/users/list, roles: ROLE_ADMIN }
 
         # Par défaut, tout le reste est accessible à tous

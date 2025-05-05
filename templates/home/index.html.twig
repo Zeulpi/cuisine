@@ -1,11 +1,13 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello HomeController!{% endblock %}
+{% block title %}Cuisine - Admin interface{% endblock %}
 {% block stylesheets %}
     {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('styles/home.css') }}" />
 {% endblock %}
 {% block javascripts %}
     {{ parent() }}
+    {# <script src="{{ asset('js/home.js')}}"></script> #}
     <script type="application/json" id="recipe-data">
         {{ { 
             urls: {
@@ -29,6 +31,12 @@
     {% endfor %}
 {% endfor %}
 
+{% if not is_granted('ROLE_USER') %}
+    <div class="login-box restricted"><button class="login-btn">Login</button></div>
+{% elseif is_granted('ROLE_USER') %}
+    <div class="login-box"><button class="logout-btn">Logout</button></div>
+{% endif %}
+
 <div class="example-wrapper">
     <h1>Admin Cuisine</h1>
 </div>
@@ -36,9 +44,13 @@
     <h1>Admin</h1>
     <ul>
         <li><a href="{{ path('app_home') }}">Home</a></li>
+        {% if is_granted('ROLE_CREATOR') or is_granted('ROLE_ADMIN')%}
         <li><a href="{{ path('admin') }}" class="restricted">Admin</a></li>
-        <li><a href="{{ path('app_recipe') }}" data-turbo="false" class="restricted" id="list-link">Recipes</a></li>
-        <li><a href="{{ path('app_users') }}" data-turbo="false" class="restricted" id="list-link">Users</a></li>
+        {# <li><a href="{{ path('app_recipe') }}" data-turbo="false" class="restricted" id="list-link">Recipes</a></li> #}
         {# <li><a href="{{ path('ingredient') }}">Ingredients</a></li> #}
+        {% endif %}
+        {% if is_granted('ROLE_ADMIN')%}
+        {# <li><a href="{{ path('app_users') }}" data-turbo="false" class="restricted" id="list-link">Users</a></li> #}
+        {% endif %}
     </ul>
 {% endblock %}

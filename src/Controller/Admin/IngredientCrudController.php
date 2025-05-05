@@ -29,7 +29,6 @@ class IngredientCrudController extends AbstractCrudController
         return [
             IdField::new('id')->hideOnForm(),
             TextField::new('ingredient_name', 'Nom de l\'ingrédient'),
-            TextField::new('ingredient_unit', 'Unité de l\'ingrédient'),
             ImageField::new('ingredient_img', 'Image de l\'ingrédient')
             ->setUploadDir('public/images/ingredients/') 
             ->setBasePath('images/ingredients/')

@@ -50,25 +50,36 @@ class UserRoleController extends AbstractController
         $originalRoles = $roles; // juste pour debug éventuel
 
         if ($action === 'upgrade') {
-            if (empty($roles)) {
-                $user->setRoles(['ROLE_USER']);
-            } elseif ($roles === ['ROLE_USER']) {
-                $user->setRoles(['ROLE_USER', 'ROLE_ADMIN']);
-            } elseif (!in_array('ROLE_ADMIN', $roles) && in_array('ROLE_USER', $roles)) {
-                $roles[] = 'ROLE_ADMIN';
-                $user->setRoles(array_unique($roles));
-            } else {
-                return new JsonResponse(['success' => false, 'message' => 'Déjà administrateur']);
+            switch ($roles) {
+                case []:
+                    $user->setRoles(['ROLE_USER']);
+                    break;
+                case ['ROLE_USER']:
+                    $user->setRoles(['ROLE_USER', 'ROLE_CREATOR']);
+                    break;
+                case ['ROLE_USER', 'ROLE_CREATOR']:
+                    $user->setRoles(['ROLE_USER', 'ROLE_CREATOR', 'ROLE_ADMIN']);
+                    break;
+                default:
+                    return new JsonResponse(['success' => false, 'message' => 'Déjà administrateur']);
+                    break;
             }
         }
 
         elseif ($action === 'downgrade') {
-            if ($roles === ['ROLE_USER']) {
-                $user->setRoles([]);
-            } elseif ($roles === ['ROLE_USER', 'ROLE_ADMIN']) {
-                $user->setRoles(['ROLE_USER']);
-            } else {
+            switch ($roles) {
+                case ['ROLE_USER']:
+                    $user->setRoles([]);
+                    break;
+                case ['ROLE_USER', 'ROLE_CREATOR']:
+                    $user->setRoles(['ROLE_USER']);
+                    break;
+                case ['ROLE_USER', 'ROLE_CREATOR', 'ROLE_ADMIN']:
+                    $user->setRoles(['ROLE_USER', 'ROLE_CREATOR']);
+                    break;
+                default:
                 return new JsonResponse(['success' => false, 'message' => 'Impossible de rétrograder']);
+                    break;
             }
         }
 

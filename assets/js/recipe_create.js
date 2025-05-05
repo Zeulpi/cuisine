@@ -53,6 +53,11 @@ function initCreateForm() {
             const previewImage = document.getElementById("image-preview-img");
             const removeImageButton = document.getElementById("remove-image-button");
             const removeImageField = document.createElement("input");
+            const qtyList = ["", "g", "kg", "litre(s)", "cuillère a café", "cuillère a soupe", "pincée"];
+            let qtyChoice = "";
+            qtyList.forEach(element => {
+                qtyChoice += `<option value='${element}'>${element}</option>`
+            });
 
             removeImageField.type = "hidden";
             removeImageField.name = "remove_image";
@@ -74,11 +79,11 @@ function initCreateForm() {
                 const imageSrc = previewImage.getAttribute("src");
                 
                 if (!imageSrc || imageSrc.trim() === "" || imageSrc === "about:blank") {
-                    removeImageButton.style.display = "none"; // ✅ Cacher le bouton
-                    previewImage.style.display = "none"; // ✅ Cacher l'aperçu
+                    removeImageButton.style.display = "none"; // Cacher le bouton
+                    previewImage.style.display = "none"; // Cacher l'aperçu
                 } else {
-                    removeImageButton.style.display = "flex"; // ✅ Afficher le bouton
-                    previewImage.style.display = "block"; // ✅ Afficher l'aperçu
+                    removeImageButton.style.display = "flex"; // Afficher le bouton
+                    previewImage.style.display = "block"; // Afficher l'aperçu
                 }
             }
 
@@ -96,8 +101,8 @@ function initCreateForm() {
                 else if (file && file.type.startsWith("image/")) {
                     const fileReader = new FileReader();
                     fileReader.onload = function (e) {
-                        previewImage.src = e.target.result; // ✅ Mettre à jour l'aperçu
-                        toggleRemoveImageButton(); // ✅ Afficher le bouton si une image est chargée
+                        previewImage.src = e.target.result; // Mettre à jour l'aperçu
+                        toggleRemoveImageButton(); // Afficher le bouton si une image est chargée
                     };
                     fileReader.readAsDataURL(this.files[0]);
                 }
@@ -105,10 +110,10 @@ function initCreateForm() {
 
             // 📌 Cas 3 : L'utilisateur clique sur le bouton "X" pour supprimer l'image
             removeImageButton.addEventListener("click", function () {
-                previewImage.src = ""; // ✅ Effacer l’image
-                imageInput.value = ""; // ✅ Réinitialiser le champ input file
-                document.getElementById("remove_image").value = "1"; // ✅ Mettre à jour le champ caché
-                toggleRemoveImageButton(); // ✅ Cacher le bouton après suppression
+                previewImage.src = ""; // Effacer l’image
+                imageInput.value = ""; // Réinitialiser le champ input file
+                document.getElementById("remove_image").value = "1"; // Mettre à jour le champ caché
+                toggleRemoveImageButton(); // Cacher le bouton après suppression
             });
             
             // Récupérer les ingrédients déjà ajoutés à la recette
@@ -135,7 +140,12 @@ function initCreateForm() {
                     </div>
                     <span class="ingredient-name">${ingredientName}</span>
                     <input type="number" class="ingredient-quantity" placeholder="Quantity" min="0" step="0.1" value="${quantity}">
-                    <input type="text" class="ingredient-unit" placeholder="Unit (e.g. kg)" value="${unit}">
+                    <div class="qty-unit">
+                        <select onchange='this.nextElementSibling.value=this.value'>
+                            ${qtyChoice}
+                        </select>
+                        <input type="text" name="format" value="${unit}" class="ingredient-unit" placeholder="Unit"/>
+                    </div>
                     <div class="ingredient-btn">
                         <button type="button" class="remove-ingredient btn btn-danger">X</button>
                     </div>
@@ -566,8 +576,13 @@ function initCreateForm() {
                     ingredientDiv.innerHTML = `
                         <div class="ingredient-img"><img src="/images/ingredients/${ingredientImage}" alt="${ingredientName}" style="width: 50px;"></div>
                         <span class="ingredient-name">${ingredientName}</span>
-                        <input type="number" class="ingredient-quantity" placeholder="Quantity" min="0" step="0.1" value="1">
-                        <input type="text" class="ingredient-unit" placeholder="Unit (e.g. kg)" value=""/>
+                        <input type="number" class="ingredient-quantity" placeholder="Quantity" min="0" step="0.1">
+                        <div class="qty-unit">
+                            <select onchange='this.nextElementSibling.value=this.value'>
+                                ${qtyChoice}
+                            </select>
+                            <input type="text" name="format" value="" class="ingredient-unit" placeholder="Unit"/>
+                        </div>
                         <div class=ingredient-btn><button type="button" class="remove-ingredient btn btn-danger">X</button></div>
                     `;
                     ingredientsContainer.appendChild(ingredientDiv);
