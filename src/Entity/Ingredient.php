@@ -41,10 +41,18 @@ class Ingredient
     #[ORM\OneToMany(targetEntity: StepOperation::class, mappedBy: 'ingredient', orphanRemoval: true, cascade: ['persist', 'remove'], fetch: 'EAGER')]
     private Collection $stepOperations;
 
+    /**
+     * @var Collection<int, Fridge>
+     */
+    #[ORM\ManyToMany(targetEntity: Fridge::class, mappedBy: 'ingredients')]
+    private Collection $fridges;
+
+
     public function __construct()
     {
         $this->ingredientRecipe = new ArrayCollection();
         $this->stepOperations = new ArrayCollection();
+        $this->fridges = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -139,6 +147,33 @@ class Ingredient
             if ($stepOperation->getIngredient() === $this) {
                 $stepOperation->setIngredient(null);
             }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Fridge>
+     */
+    public function getFridges(): Collection
+    {
+        return $this->fridges;
+    }
+
+    public function addFridge(Fridge $fridge): static
+    {
+        if (!$this->fridges->contains($fridge)) {
+            $this->fridges->add($fridge);
+            $fridge->addIngredient($this);
+        }
+
+        return $this;
+    }
+
+    public function removeFridge(Fridge $fridge): static
+    {
+        if ($this->fridges->removeElement($fridge)) {
+            $fridge->removeIngredient($this);
         }
 
         return $this;

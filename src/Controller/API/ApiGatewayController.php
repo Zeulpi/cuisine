@@ -116,6 +116,20 @@ class ApiGatewayController extends AbstractController
                     ]);
                 }
                 break;
+            case 'user-fridge-addingredient': // Ajouter un ingrédient au fridge user
+                if ($method === 'POST') {
+                    return $this->forward('App\Controller\API\User\Fridge\UserApiFridgeController::addIngredientToFridge', [
+                        'request' => $request,
+                    ]);
+                }
+                break;
+            case 'user-fridge-getingredients': // Récupérer le contenu du fridge
+                if ($method === 'GET') {
+                    return $this->forward('App\Controller\API\User\Fridge\UserApiFridgeController::getIngredientsFromFridge', [
+                        'request' => $request,
+                    ]);
+                }
+                break;
             default:
                 return new JsonResponse(['error' => 'Action inconnue'], 400);
         }

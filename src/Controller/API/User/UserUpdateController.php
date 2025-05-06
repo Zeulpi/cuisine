@@ -93,7 +93,7 @@ class UserUpdateController extends AbstractController
                   $user->setUserName($receivedData["sentUserName"]);
               }
 
-            // ✅ Traitement de l’image (ajouté sans retour anticipé)
+            // Traitement de l’image (ajouté sans retour anticipé)
             $uploadedFile = $request->files->get('userImage');
             if ($uploadedFile) {
                 $uploadDir = $this->getParameter('kernel.project_dir') . '/public/images/avatar';

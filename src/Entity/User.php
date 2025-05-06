@@ -62,11 +62,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::SMALLINT)]
     private ?int $failedAttempts = null;
 
+    #[ORM\OneToOne(targetEntity: Fridge::class, mappedBy: 'user')]
+    private $fridge;
+
     public function __construct()
     {
         $this->UserNote = new ArrayCollection();
         $this->userPlanners = $this->initializePlanners();
         $this->failedAttempts = 0;
+        $this->fridge = new Fridge();
     }
 
     public function initializePlanners(): array
@@ -412,6 +416,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function resetFailedAttempts(): static{
         $this->failedAttempts = 0;
 
+        return $this;
+    }
+
+    public function getFridge(): ?Fridge
+    {
+        return $this->fridge;
+    }
+
+    public function setFridge(?Fridge $fridge): self
+    {
+        $this->fridge = $fridge;
         return $this;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Controller\API\User;
 
+use App\Entity\Fridge;
 use App\Entity\User;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -85,7 +86,7 @@ class UserCreateController extends AbstractController
                   $user->setUserName($receivedData["sentUserName"]);
               }
 
-            // ✅ Traitement de l’image (ajouté sans retour anticipé)
+            // Traitement de l’image (ajouté sans retour anticipé)
             $uploadedFile = $request->files->get('userImage');
             if ($uploadedFile) {
                 $uploadDir = $this->getParameter('kernel.project_dir') . '/public/images/avatar';
@@ -107,6 +108,17 @@ class UserCreateController extends AbstractController
             }
 
             $this->entityManager->persist($user);
+            $this->entityManager->flush();
+
+
+            // Création d'un fridge pour le nouvel utilisateur
+            $userFridge = new Fridge();
+            $userFridge->setUser($user);
+            $user->setFridge($userFridge);
+
+            // Persist et flush pour sauvegarder le fridge en bdd
+            $this->entityManager->persist($user);
+            $this->entityManager->persist($userFridge);
             $this->entityManager->flush();
 
             // Crée un nouveau token pour mettre a jour le front
