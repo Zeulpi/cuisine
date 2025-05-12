@@ -16,6 +16,7 @@ function initCreateForm() {
             
             // Utiliser les données récupérées
             const ingredients = recipeData.ingredients;
+            console.log(ingredients);
             const ingredientsPerPage = recipeData.ingredientsPerPage;
             const operations = recipeData.operations;
             const imagePath = recipeData.imagePath;
@@ -53,11 +54,6 @@ function initCreateForm() {
             const previewImage = document.getElementById("image-preview-img");
             const removeImageButton = document.getElementById("remove-image-button");
             const removeImageField = document.createElement("input");
-            const qtyList = ["", "g", "kg", "litre(s)", "cuillère a café", "cuillère a soupe", "pincée"];
-            let qtyChoice = "";
-            qtyList.forEach(element => {
-                qtyChoice += `<option value='${element}'>${element}</option>`
-            });
 
             removeImageField.type = "hidden";
             removeImageField.name = "remove_image";
@@ -74,7 +70,7 @@ function initCreateForm() {
             // Gestion de l'image recette //
             // -------------------------- //
 
-            // 📌 Fonction pour cacher/afficher le bouton de suppression
+            // Fonction pour cacher/afficher le bouton de suppression d'image
             function toggleRemoveImageButton() {
                 const imageSrc = previewImage.getAttribute("src");
                 
@@ -87,10 +83,10 @@ function initCreateForm() {
                 }
             }
 
-            // 📌 Cas 1 : Vérifier au chargement si une image existe
+            // Cas 1 : Vérifier au chargement si une image existe
             toggleRemoveImageButton();
 
-            // 📌 Cas 2 : L'utilisateur sélectionne une nouvelle image
+            // Cas 2 : L'utilisateur sélectionne une nouvelle image
             imageInput.addEventListener("change", function (event) {
                 recipeImg ? document.getElementById("remove_image").value = "1" : null;
                 const file = event.target.files[0];
@@ -108,7 +104,7 @@ function initCreateForm() {
                 }
             });
 
-            // 📌 Cas 3 : L'utilisateur clique sur le bouton "X" pour supprimer l'image
+            // Cas 3 : L'utilisateur clique sur le bouton "X" pour supprimer l'image
             removeImageButton.addEventListener("click", function () {
                 previewImage.src = ""; // Effacer l’image
                 imageInput.value = ""; // Réinitialiser le champ input file
@@ -129,22 +125,36 @@ function initCreateForm() {
             document.getElementById('recipe_recipeSteps').innerHTML = ``;
             
             // Fonction pour ajouter un ingrédient au DOM (et au champ caché) lors de l'edition d'une recette
-            function addIngredientToDOM(ingredientId, ingredientName, ingredientImg, quantity = 1, unit = '') {
+            function addIngredientToDOM(ingredientId, quantity, unit) {
                 let ingredientDiv = document.createElement('div');
                 ingredientDiv.classList.add('ingredient-item');
                 ingredientDiv.setAttribute('data-id', ingredientId);
-            
+
+                const ingr = ingredients.find(item => item.id === ingredientId);
+                const ingredientImage = ingr.ingredientImg;
+                const ingredientName = ingr.ingredientName;
+                const ingredientUnit = ingr.ingredientUnit;
+
+                let qtyChoice = "";
+                (ingredientUnit.includes(" " || "") && (!unit || unit=="" || unit== " ")) ? (qtyChoice += `<option value='' selected></option>`) : (qtyChoice += `<option value=''></option>`);
+                ingredientUnit.forEach(element => {
+                    if (element != "" && element != " "){
+                        (element == unit) ?
+                        qtyChoice += `<option value='${element}' selected>${element}</option>`
+                        : qtyChoice += `<option value='${element}'>${element}</option>`
+                    }
+                });
+
                 ingredientDiv.innerHTML = `
                     <div class="ingredient-img">
-                        <img src="/images/ingredients/${ingredientImg}" alt="${ingredientName}" style="width: 50px;">
+                        <img src="/images/ingredients/${ingredientImage}" alt="${ingredientName}" style="width: 50px;">
                     </div>
                     <span class="ingredient-name">${ingredientName}</span>
                     <input type="number" class="ingredient-quantity" placeholder="Quantity" min="0" step="0.1" value="${quantity}">
                     <div class="qty-unit">
-                        <select onchange='this.nextElementSibling.value=this.value'>
+                        <select class="ingredient-unit">
                             ${qtyChoice}
                         </select>
-                        <input type="text" name="format" value="${unit}" class="ingredient-unit" placeholder="Unit"/>
                     </div>
                     <div class="ingredient-btn">
                         <button type="button" class="remove-ingredient btn btn-danger">X</button>
@@ -565,27 +575,8 @@ function initCreateForm() {
                 if (e.target && e.target.closest('.ingredient-card')) {
                     const selectedCard = e.target.closest('.ingredient-card');
                     const ingredientId = parseInt(selectedCard.getAttribute('data-id'), 10);
-                    const ingredientImage = selectedCard.getAttribute('data-image');
-                    const ingredientName = selectedCard.getAttribute('data-name');
 
-                    // Ajouter l'ingrédient sélectionné à la recette
-                    const ingredientDiv = document.createElement('div');
-                    ingredientDiv.classList.add('ingredient-item');
-                    ingredientDiv.setAttribute('data-id', ingredientId); 
-
-                    ingredientDiv.innerHTML = `
-                        <div class="ingredient-img"><img src="/images/ingredients/${ingredientImage}" alt="${ingredientName}" style="width: 50px;"></div>
-                        <span class="ingredient-name">${ingredientName}</span>
-                        <input type="number" class="ingredient-quantity" placeholder="Quantity" min="0" step="0.1">
-                        <div class="qty-unit">
-                            <select onchange='this.nextElementSibling.value=this.value'>
-                                ${qtyChoice}
-                            </select>
-                            <input type="text" name="format" value="" class="ingredient-unit" placeholder="Unit"/>
-                        </div>
-                        <div class=ingredient-btn><button type="button" class="remove-ingredient btn btn-danger">X</button></div>
-                    `;
-                    ingredientsContainer.appendChild(ingredientDiv);
+                    addIngredientToDOM(ingredientId);
 
                     // Ajouter l'ID au tableau des ingrédients sélectionnés
                     selectedIngredients.push({ ingredientId, quantity: 1 }); // Valeur par défaut pour la quantité
@@ -613,9 +604,9 @@ function initCreateForm() {
                 // Si l'élément modifié est la quantité
                 if (e.target && e.target.classList.contains('ingredient-quantity')) {
 
-                    if (isNaN(quantity) || quantity <= 0) {
+                    if (quantityInput.value.length > 0 && (isNaN(quantity) || quantity <= 0)) {
                         alert('Please enter a valid quantity.');
-                        e.target.value = 1; // Valeur par défaut si la quantité n'est pas valide
+                        e.target.value = null; // Valeur par défaut si la quantité n'est pas valide
                         return;
                     }
 

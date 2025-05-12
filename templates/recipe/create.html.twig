@@ -48,6 +48,7 @@
         });
         const recipeCreatePath = "{{ asset('js/recipe_create.js') }}";
     </script>
+        {# <pre>{{ dump('ingredients', ingredients) }}</pre> #}
     {% if recipe is defined and recipe is not empty %}
         <script src="{{ asset('js/recipe_update.js') }}" defer type="module"></script>
         <pre>{{ dump('données de la recette', recipe) }}</pre>

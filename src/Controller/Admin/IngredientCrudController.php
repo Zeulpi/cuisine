@@ -5,7 +5,8 @@ namespace App\Controller\Admin;
 use App\Entity\Ingredient;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Config\{Action, Actions, Crud, KeyValueStore};
-use EasyCorp\Bundle\EasyAdminBundle\Field\{IdField, EmailField, TextField, ArrayField, AssociationField, BooleanField, TextEditorField, ChoiceField, ImageField, DateField};
+use EasyCorp\Bundle\EasyAdminBundle\Field\{IdField, TextField, ImageField, CollectionField};
+use Symfony\Component\Form\Extension\Core\Type\{TextType};
 
 class IngredientCrudController extends AbstractCrudController
 {
@@ -26,6 +27,7 @@ class IngredientCrudController extends AbstractCrudController
     
     public function configureFields(string $pageName): iterable
     {
+        $units = [''];
         return [
             IdField::new('id')->hideOnForm(),
             TextField::new('ingredient_name', 'Nom de l\'ingrédient'),
@@ -34,6 +36,19 @@ class IngredientCrudController extends AbstractCrudController
             ->setBasePath('images/ingredients/')
             ->setUploadedFileNamePattern('[name]-[uuid].[extension]')
             ->setRequired($pageName === Crud::PAGE_NEW),
+            TextField::new('ingredientUnitDisplay', 'Unités autorisées')
+            ->onlyOnIndex(),
+            CollectionField::new('ingredientUnit')
+            ->setEntryType(TextType::class)
+            ->setFormTypeOption('entry_options', [
+                'required' => false,
+                'empty_data' => '',
+                'trim' => false,
+            ])
+            ->allowAdd()
+            ->allowDelete()
+            ->setLabel('Unités autorisées')
+            ->onlyOnForms()
         ];
     }
 }

@@ -43,11 +43,12 @@ class UserApiFridgeController extends AbstractController
             $receivedData = [
                 "sentToken" => $data['token'],
                 "sentIngredientId" => $data['ingredientId'],
+                "sentName" => $data['ingredientName'],
                 "sentQuantity" => $data['ingredientQuantity'],
-                "sentUnit" => $data['ingredientUnit'] || '',
+                "sentUnit" => $data['ingredientUnit'],
             ];
 
-            if (!$receivedData['sentToken'] || !$receivedData['sentIngredientId'] || !$receivedData['sentQuantity']) {
+            if (!$receivedData['sentToken'] || !$receivedData['sentIngredientId'] || !$receivedData['sentQuantity'] || !$receivedData['sentName']) {
                 return new JsonResponse(['success' => false, 'message' => 'Paramètres manquants'], 400);
             }
 
@@ -81,18 +82,20 @@ class UserApiFridgeController extends AbstractController
             
             // ajouter l'ingrédient recu au fridge User (avec qty et unit)
             $userFridge = $user->getFridge();
-            $userFridge->addIngredientToInventory($receivedData['sentIngredientId'], $receivedData['sentQuantity'], $receivedData['sentUnit'], $entityManager);
+            $userFridge->addIngredientToInventory($receivedData['sentIngredientId'], $receivedData['sentName'], $receivedData['sentQuantity'], $receivedData['sentUnit'], $entityManager);
 
             // Sauvegarder les changements
             $entityManager->persist($user);
             $entityManager->flush();
+
+            $userInventory = $userFridge->getInventory();
             
             // Raffraichir $user et générer un nouveau token
             $user = $this->entityManager->getRepository(User::class)->findOneByEmail($payload['email']);
             $newToken = $this->jwtManager->create($user);
 
             // Retourner le token JWT dans la réponse
-            return new JsonResponse(['message' => 'Ingredient ajouté au fridge', 'token' => $newToken]);
+            return new JsonResponse(['message' => 'Ingredient ajouté au fridge', 'token' => $newToken, 'inventory' => $userInventory]);
 
         } catch (\Throwable $e) {
             return new JsonResponse([
@@ -138,14 +141,12 @@ class UserApiFridgeController extends AbstractController
             $userFridge = $user->getFridge();
             $userInventory = $userFridge->getInventory();
 
-            
-
             // Générer un nouveau token
             $newToken = $this->jwtManager->create($user);
 
 
             // Retourner le token JWT dans la réponse + la liste des ingrédients du fridge
-            return new JsonResponse(['message' => 'Recupération des recettes', 'token' => $newToken]);
+            return new JsonResponse(['message' => 'Recupération de l\'inventaire', 'token' => $newToken, 'inventory' => $userInventory]);
 
         } catch (\Throwable $e) {
             return new JsonResponse([

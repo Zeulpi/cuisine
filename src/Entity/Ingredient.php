@@ -22,8 +22,9 @@ class Ingredient
     #[Groups(['ingredient:read'])]
     private ?string $ingredientName = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $ingredientUnit = null;
+    #[ORM\Column(type: 'json')]
+    #[Groups(['ingredient:read'])]
+    private array $ingredientUnit = [];
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['ingredient:read'])]
@@ -72,16 +73,34 @@ class Ingredient
         return $this;
     }
 
-    public function getIngredientUnit(): ?string
+    /**
+     * @see UserInterface
+     * @return list<string>
+     */
+    public function getIngredientUnit(): array
     {
-        return $this->ingredientUnit;
+        return $this->ingredientUnit ?? [];
     }
 
-    public function setIngredientUnit(string $ingredientUnit): static
+    /**
+     * @param list<string> $ingredientUnit
+     */
+    public function setIngredientUnit(array $ingredientUnit): static
     {
         $this->ingredientUnit = $ingredientUnit;
 
         return $this;
+    }
+
+    public function getIngredientUnitDisplay(): string
+    {
+        if (empty($this->ingredientUnit)) {
+            return '';
+        }
+
+        return implode(', ', array_map(function ($unit) {
+            return ($unit === '' || $unit === ' ') ? '(pièce)' : $unit;
+        }, $this->ingredientUnit));
     }
 
     public function getIngredientImg(): ?string

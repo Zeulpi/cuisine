@@ -44,7 +44,7 @@
             const quantityData = recipeQuantities[ingredientId] || { quantity: 1, unit: '' };
 
             // Ajouter l'ingrédient au DOM
-            RecipeCreate.addIngredientToDOM(ingredient.id, ingredient.ingredientName, ingredient.ingredientImg, quantityData.quantity, quantityData.unit);
+            RecipeCreate.addIngredientToDOM(ingredient.id, quantityData.quantity, quantityData.unit);
 
             // Construire l'objet de l'ingrédient à ajouter
             let ingredientObject = {

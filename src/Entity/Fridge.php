@@ -88,7 +88,7 @@ class Fridge
         return $this;
     }
 
-    public function addIngredientToInventory(int $ingredientId, float $quantity, string $unit, EntityManagerInterface $entityManager): static
+    public function addIngredientToInventory(int $ingredientId, string $name, float $quantity, string $unit, EntityManagerInterface $entityManager): static
     {
         // Récupérer l'ingrédient à partir de son ID
         $ingredientRepository = $entityManager->getRepository(Ingredient::class);
@@ -115,14 +115,14 @@ class Fridge
                 
             }
             // Si aucune entrée avec la même unité n'a été trouvée, on ajoute une nouvelle entrée
-            $this->inventory[$ingredientId][] = ['quantity' => $quantity, 'unit' => $unit];
+            $this->inventory[$ingredientId][] = ['name' => $name, 'image' => $ingredient->getIngredientImg(), 'quantity' => $quantity, 'unit' => $unit];
         }
         // Si l'ingrédient n'existe pas encore dans l'inventaire, on l'ajoute (a condition que la quantité > 0)
         elseif (!(isset($this->inventory[$ingredientId])) && $quantity > 0) {
             // Lier le Frigo a l'Ingredient
             $this->addIngredient($ingredient);
             // Si l'ingrédient n'existe pas encore, on le crée avec la première entrée
-            $this->inventory[$ingredientId] = [['quantity' => $quantity, 'unit' => $unit]];
+            $this->inventory[$ingredientId] = [['name'=>$ingredient->getIngredientName(), 'image' => $ingredient->getIngredientImg(), 'quantity' => $quantity, 'unit' => $unit]];
         } else {
             return $this;    
         }

@@ -271,8 +271,8 @@
 }
 
 
-.qty-unit {position:relative; background-color:white; border:solid grey 1px; width:100%; height:70%; grid-column-start: 6;
+.qty-unit {border:solid grey 1px; width:100%; height:70%; grid-column-start: 6;
     grid-column-end: 8;}
-.qty-unit select {position:absolute; top:0px; left:0px; font-size:14px; border:none; width:100%; height: 100%; margin:0;}
-.qty-unit input {position:absolute; top:0px; left:0px; width:90%; height: 100%; padding:2px; border:none;}
-.qty-unit select:focus, .select-editable input:focus {outline:none;}
+.qty-unit select {font-size:14px; border:none; width:100%; height: 100%; margin:0;}
+/* .qty-unit input {position:absolute; top:0px; left:0px; width:90%; height: 100%; padding:2px; border:none;} */
+/* .qty-unit select:focus, .select-editable input:focus {outline:none;} */
