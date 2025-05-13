@@ -43,12 +43,11 @@ class UserApiFridgeController extends AbstractController
             $receivedData = [
                 "sentToken" => $data['token'],
                 "sentIngredientId" => $data['ingredientId'],
-                "sentName" => $data['ingredientName'],
                 "sentQuantity" => $data['ingredientQuantity'],
                 "sentUnit" => $data['ingredientUnit'],
             ];
 
-            if (!$receivedData['sentToken'] || !$receivedData['sentIngredientId'] || !$receivedData['sentQuantity'] || !$receivedData['sentName']) {
+            if (!$receivedData['sentToken'] || !$receivedData['sentIngredientId'] || !$receivedData['sentQuantity']) {
                 return new JsonResponse(['success' => false, 'message' => 'Paramètres manquants'], 400);
             }
 
@@ -82,7 +81,7 @@ class UserApiFridgeController extends AbstractController
             
             // ajouter l'ingrédient recu au fridge User (avec qty et unit)
             $userFridge = $user->getFridge();
-            $userFridge->addIngredientToInventory($receivedData['sentIngredientId'], $receivedData['sentName'], $receivedData['sentQuantity'], $receivedData['sentUnit'], $entityManager);
+            $userFridge->addIngredientToInventory($receivedData['sentIngredientId'], $receivedData['sentQuantity'], $receivedData['sentUnit'], $entityManager);
 
             // Sauvegarder les changements
             $entityManager->persist($user);
@@ -95,7 +94,7 @@ class UserApiFridgeController extends AbstractController
             $newToken = $this->jwtManager->create($user);
 
             // Retourner le token JWT dans la réponse
-            return new JsonResponse(['message' => 'Ingredient ajouté au fridge', 'token' => $newToken, 'inventory' => $userInventory]);
+            return new JsonResponse(['message' => 'Ingredient ajouté au fridge', 'token' => $newToken, 'inventory' => $userInventory, 'updated' => 'updated']);
 
         } catch (\Throwable $e) {
             return new JsonResponse([

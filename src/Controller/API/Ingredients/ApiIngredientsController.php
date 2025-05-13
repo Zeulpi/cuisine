@@ -38,8 +38,6 @@ final class ApiIngredientsController extends AbstractController{
                 break;
         }
 
-        $applyGroupBy = false;
-
         // 🔍 Filtrage par nom (search)
         if (!is_string($searchTerm)) {
             return new JsonResponse(['error' => 'Paramètre de recherche invalide.'], 400);
@@ -71,6 +69,7 @@ final class ApiIngredientsController extends AbstractController{
                 'id' => $ingredient->getId(),
                 'name' => $ingredient->getIngredientName(),
                 'image' => $ingredient->getIngredientImg(),
+                'units' => $ingredient->getIngredientUnit(),
             ];
         }
 

@@ -109,7 +109,7 @@ class ApiGatewayController extends AbstractController
                     ]);
                 }
                 break;
-            case 'user-shopping-get': // Ajouter une recette au planner
+            case 'user-shopping-get': // Recuperer les ingrédients necessaires a un planner
                 if ($method === 'POST') {
                     return $this->forward('App\Controller\API\User\Planner\UserApiPlannerController::getShopping', [
                         'request' => $request,
@@ -130,7 +130,7 @@ class ApiGatewayController extends AbstractController
                     ]);
                 }
                 break;
-            case 'user-fridge-getingredients': // Récupérer la liste paginée des ingredients
+            case 'user-fridge-getingredients': // Récupérer la liste paginée des ingredients du fridge
                 if ($method === 'GET') {
                     return $this->forward('App\Controller\API\Ingredients\ApiIngredientsController::listIngredients', [
                         'request' => $request,

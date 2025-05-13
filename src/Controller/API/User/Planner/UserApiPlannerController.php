@@ -453,11 +453,42 @@ class UserApiPlannerController extends AbstractController
                     $requestedPortions = $sentRecipes[$recipe->getId()];
                     $adjustedQuantity = ($ingredientQuantity * $requestedPortions) / $recipePortions;
 
+                    // // Ajouter ou mettre à jour la quantité pour l'unité correspondante
+                    // if (isset($ingredientsData[$ingredientName])) {
+                    //     // Vérifier si l'unité existe déjà pour cet ingrédient
+                    //     $foundUnit = false;
+                    //     foreach ($ingredientsData[$ingredientName]['quantities'] as &$quantObj) {
+                    //         if ($quantObj['unit'] === $ingredientUnit) {
+                    //             // Si l'unité existe déjà, on ajoute la quantité
+                    //             $quantObj['quantity'] += $adjustedQuantity;
+                    //             $foundUnit = true;
+                    //             break;
+                    //         }
+                    //     }
+
+                    //     // Si l'unité n'existe pas encore, on l'ajoute
+                    //     if (!$foundUnit) {
+                    //         $ingredientsData[$ingredientName]['quantities'][] = [
+                    //             'quantity' => $adjustedQuantity,
+                    //             'unit' => $ingredientUnit
+                    //         ];
+                    //     }
+                    // } else {
+                    //     // Si l'ingrédient n'existe pas encore, on le crée
+                    //     $ingredientsData[$ingredientName] = [
+                    //         'quantities' => [
+                    //             [
+                    //                 'quantity' => $adjustedQuantity,
+                    //                 'unit' => $ingredientUnit
+                    //             ]
+                    //         ]
+                    //     ];
+                    // }
                     // Ajouter ou mettre à jour la quantité pour l'unité correspondante
-                    if (isset($ingredientsData[$ingredientName])) {
+                    if (isset($ingredientsData[$ingredientId])) {
                         // Vérifier si l'unité existe déjà pour cet ingrédient
                         $foundUnit = false;
-                        foreach ($ingredientsData[$ingredientName]['quantities'] as &$quantObj) {
+                        foreach ($ingredientsData[$ingredientId] as &$quantObj) {
                             if ($quantObj['unit'] === $ingredientUnit) {
                                 // Si l'unité existe déjà, on ajoute la quantité
                                 $quantObj['quantity'] += $adjustedQuantity;
@@ -468,20 +499,18 @@ class UserApiPlannerController extends AbstractController
 
                         // Si l'unité n'existe pas encore, on l'ajoute
                         if (!$foundUnit) {
-                            $ingredientsData[$ingredientName]['quantities'][] = [
+                            $ingredientsData[$ingredientId][] = [
+                                'name' => $ingredient->getIngredientName(),
                                 'quantity' => $adjustedQuantity,
                                 'unit' => $ingredientUnit
                             ];
                         }
                     } else {
                         // Si l'ingrédient n'existe pas encore, on le crée
-                        $ingredientsData[$ingredientName] = [
-                            'quantities' => [
-                                [
-                                    'quantity' => $adjustedQuantity,
-                                    'unit' => $ingredientUnit
-                                ]
-                            ]
+                        $ingredientsData[$ingredientId][] = [
+                            'name' => $ingredient->getIngredientName(),
+                            'quantity' => $adjustedQuantity,
+                            'unit' => $ingredientUnit
                         ];
                     }
                 }
