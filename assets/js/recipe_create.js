@@ -133,10 +133,14 @@ function initCreateForm() {
                 const ingr = ingredients.find(item => item.id === ingredientId);
                 const ingredientImage = ingr.ingredientImg;
                 const ingredientName = ingr.ingredientName;
-                const ingredientUnit = ingr.ingredientUnit;
+                let ingredientUnit = ingr.ingredientUnit;
+                // Si c’est un objet indexé, on le transforme en tableau de ses valeurs
+                if (!Array.isArray(ingredientUnit)) {
+                    ingredientUnit = Object.values(ingredientUnit);
+                }
 
                 let qtyChoice = "";
-                (ingredientUnit.includes(" " || "") && (!unit || unit=="" || unit== " ")) ? (qtyChoice += `<option value='' selected></option>`) : (qtyChoice += `<option value=''></option>`);
+                (ingredientUnit && (ingredientUnit.includes("") || ingredientUnit.includes("")) && (!unit || unit=="" || unit== " ")) ? (qtyChoice += `<option value='' selected></option>`) : (qtyChoice += `<option value=''></option>`);
                 ingredientUnit.forEach(element => {
                     if (element != "" && element != " "){
                         (element == unit) ?

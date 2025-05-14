@@ -123,6 +123,13 @@ class ApiGatewayController extends AbstractController
                     ]);
                 }
                 break;
+            case 'user-fridge-addlisttofridge': // Ajouter une liste d'ingrédients au fridge user
+                if ($method === 'POST') {
+                    return $this->forward('App\Controller\API\User\Fridge\UserApiFridgeController::addListToFridge', [
+                        'request' => $request,
+                    ]);
+                }
+                break;
             case 'user-fridge-getfridge': // Récupérer le contenu du fridge
                 if ($method === 'GET') {
                     return $this->forward('App\Controller\API\User\Fridge\UserApiFridgeController::getIngredientsFromFridge', [

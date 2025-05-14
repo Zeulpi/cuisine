@@ -16,6 +16,8 @@
     let recipeOperations = {};
     let recipeSteps = {};
     existingRecipe ? recipeQuantities = existingRecipe.recipeQuantities :null;
+    console.log('quantities : ', recipeQuantities);
+    
     existingRecipe ? recipePortions = existingRecipe.recipePortions :null;
     existingRecipe ? recipeName = existingRecipe.recipeName :null;
     existingRecipe ? recipeImg = existingRecipe.recipeImg :null;
@@ -38,6 +40,7 @@
 
     // Attribuer les ingrédients a la recette
     if (existingRecipe && existingRecipe.recipeIngredient) {
+        console.log('ingredients existants : ', existingRecipe.recipeIngredient);
         existingRecipe.recipeIngredient.forEach(ingredient => {
             // Récupérer la quantité et l’unité depuis recipeQuantities
             const ingredientId = ingredient.id.toString();

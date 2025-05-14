@@ -104,6 +104,74 @@ class UserApiFridgeController extends AbstractController
         }
     }
 
+    // #[Route('/api/user/fridge/addingredientlist', name: 'api_user_fridge_add_list', methods: ['POST'])]
+    public function addListToFridge(Request $request, EntityManagerInterface $entityManager) : JsonResponse
+    {
+        try {
+            // Récupération des données JSON envoyées
+            $data = json_decode($request->getContent(), true);
+
+            $receivedData = [
+                "sentToken" => $data['token'],
+                "sentList" => $data['ingredientList'],
+            ];
+
+            if (!$receivedData['sentToken'] || !$receivedData['sentList']) {
+                return new JsonResponse(['success' => false, 'message' => 'Paramètres manquants'], 400);
+            }
+
+            try {
+                $payload = $this->jwtEncoder->decode($receivedData["sentToken"]);
+            } catch (\Exception $e) {
+                return new JsonResponse([
+                    'error' => 'Token invalide',
+                    'details' => $e->getMessage(),
+                ], 401);
+            }
+            // Trouver l'utilisateur par son email
+            $user = $this->entityManager->getRepository(User::class)->findOneByEmail($payload['email']);
+
+            // Verifier si le User existe
+            if (!$user) {
+                return new JsonResponse(['error' => 'Utilisateur non trouvé'], 404);
+            }
+            // Verifier le token pour s'assurer que le bon user accede au bon planner
+            if (!$payload || $payload['email'] !== $user->getUserIdentifier()) {
+                return new JsonResponse(['error' => 'Token invalide ou utilisateur non autorisé'], 401);
+            }
+            
+            // Recuperer le Fridge du User
+            $userFridge = $user->getFridge();
+
+            foreach ($receivedData['sentList'] as $ingId=>$entry) {    
+                foreach($entry as $ingredient){
+                    if($ingredient['unit'] && $ingredient['quantity']){
+                        $userFridge->addIngredientToInventory($ingId, $ingredient['quantity'], $ingredient['unit'], $entityManager);
+                    }
+                }
+            }
+
+            // Sauvegarder les changements
+            $entityManager->persist($user);
+            $entityManager->flush();
+
+            $userInventory = $userFridge->getInventory();
+            
+            // Raffraichir $user et générer un nouveau token
+            $user = $this->entityManager->getRepository(User::class)->findOneByEmail($payload['email']);
+            $newToken = $this->jwtManager->create($user);
+
+            // Retourner le token JWT dans la réponse
+            return new JsonResponse(['message' => 'Ingredient ajouté au fridge', 'token' => $newToken, 'inventory' => $userInventory, 'updated' => 'updated']);
+
+        } catch (\Throwable $e) {
+            return new JsonResponse([
+                'error' => 'Erreur serveur : ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+    }
+
     // #[Route('/api/user/fridge/get', name: 'api_user_fridge_get', methods: ['GET'])]
     public function getIngredientsFromFridge(Request $request, EntityManagerInterface $entityManager) : JsonResponse
     {

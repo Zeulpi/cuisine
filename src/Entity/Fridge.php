@@ -112,10 +112,11 @@ class Fridge
                     }
                     return $this; // Sortir après avoir mis à jour la quantité
                 }
-                
             }
             // Si aucune entrée avec la même unité n'a été trouvée, on ajoute une nouvelle entrée
-            $this->inventory[$ingredientId][] = ['name' => $ingredient->getIngredientName(), 'image' => $ingredient->getIngredientImg(), 'quantity' => $quantity, 'unit' => $unit, 'allowedUnits' => $ingredient->getIngredientUnit()];
+            if($quantity > 0) {
+                $this->inventory[$ingredientId][] = ['name' => $ingredient->getIngredientName(), 'image' => $ingredient->getIngredientImg(), 'quantity' => $quantity, 'unit' => $unit, 'allowedUnits' => $ingredient->getIngredientUnit()];
+            }
         }
         // Si l'ingrédient n'existe pas encore dans l'inventaire, on l'ajoute (a condition que la quantité > 0)
         elseif (!(isset($this->inventory[$ingredientId])) && $quantity > 0) {
