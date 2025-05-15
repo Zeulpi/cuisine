@@ -58,7 +58,7 @@ class PlannerRecipes implements \JsonSerializable
     }
     
     // Méthode pour ajouter une recette à un repas spécifique
-    public function addMeal(string $day, int $recipeId, int $portions): void
+    public function addMeal(string $day, int $recipeId, int $portions, int $used=0): void
     {
         $mealKey = $day; // Par exemple 'monM' pour lundi midi
 
@@ -66,6 +66,7 @@ class PlannerRecipes implements \JsonSerializable
         if (property_exists($this, $mealKey)) {
             $this->{$mealKey}[0] = $recipeId;
             $this->{$mealKey}[1] = $portions;
+            $this->{$mealKey}[2] = $used;
         } else {
             throw new \Exception('Jour invalide pour un repas');
         }
@@ -76,6 +77,14 @@ class PlannerRecipes implements \JsonSerializable
         // On vérifie si le jour est valide
         if (property_exists($this, $mealKey)) {
             $this->{$mealKey} = [];
+        } else {
+            throw new \Exception('Jour invalide pour un repas');
+        }
+    }
+    public function markMeal(string $day): void{
+        $mealKey = $day;
+        if (property_exists($this, $mealKey)) {
+            $this->{$mealKey}[2] = 1;
         } else {
             throw new \Exception('Jour invalide pour un repas');
         }

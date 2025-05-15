@@ -239,14 +239,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
             $recipesData = $currentPlanner['recipes']; // Les recettes pour le planner
             foreach ($recipesData as $dayKey => $mealData) {
-                if (isset($mealData[0]) && isset($mealData[1])) {
+                if (isset($mealData[0]) && isset($mealData[1]) && isset($mealData[2])) {
                     $day = $dayKey;
                     
                     $recipeId = $mealData[0]; // ID de la recette
                     $portions = $mealData[1]; // Nombre de portions
+                    $used = (int) $mealData[2]; // Nombre de portions
 
                     // Ajoute la recette au planner
-                    $plannerRecipes->addMeal($day, $recipeId, $portions);
+                    $plannerRecipes->addMeal($day, $recipeId, $portions, $used);
                 }
             }
 

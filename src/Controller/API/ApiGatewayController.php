@@ -109,6 +109,13 @@ class ApiGatewayController extends AbstractController
                     ]);
                 }
                 break;
+            case 'user-planner-setmark': // Marquer le planner comme traité au destockage
+                if ($method === 'POST') {
+                    return $this->forward('App\Controller\API\User\Planner\UserApiPlannerController::setMark', [
+                        'request' => $request,
+                    ]);
+                }
+                break;
             case 'user-shopping-get': // Recuperer les ingrédients necessaires a un planner
                 if ($method === 'POST') {
                     return $this->forward('App\Controller\API\User\Planner\UserApiPlannerController::getShopping', [

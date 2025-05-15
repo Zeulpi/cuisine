@@ -410,6 +410,78 @@ class UserApiPlannerController extends AbstractController
         }
     }
 
+    // #[Route('/api/user/planner/setMark', name: 'api_user_planner_setmark', methods: ['POST'])]
+    public function setMark(Request $request, EntityManagerInterface $entityManager) : JsonResponse
+    {
+        try {
+            // Récupération des données JSON envoyées
+            $data = json_decode($request->getContent(), true);
+
+            $receivedData = [
+                "sentToken" => $data['token'],
+                "sentIndex" => $data['index'],
+                "sentDay" => $data['day'],
+            ];
+
+            if (!$receivedData['sentToken'] ||  !$receivedData['sentDay'] ) {
+                return new JsonResponse(['success' => false, 'message' => 'Paramètres manquants'], 400);
+            }
+
+            if (!is_int($receivedData['sentIndex']) || $receivedData['sentIndex'] > 3 || $receivedData['sentIndex'] < 0) {
+                return new JsonResponse(['success' => false, 'message' => 'Index planner invalide'], 400);
+            }
+
+            try {
+                $payload = $this->jwtEncoder->decode($receivedData["sentToken"]);
+            } catch (\Exception $e) {
+                return new JsonResponse([
+                    'error' => 'Token invalide',
+                    'details' => $e->getMessage(),
+                ], 401);
+            }
+            // Trouver l'utilisateur par son email
+            $user = $this->entityManager->getRepository(User::class)->findOneByEmail($payload['email']);
+
+            // Verifier si le User existe
+            if (!$user) {
+                return new JsonResponse(['error' => 'Utilisateur non trouvé'], 404);
+            }
+            // Verifier le token pour s'assurer que le bon user accede au bon planner
+            if (!$payload || $payload['email'] !== $user->getUserIdentifier()) {
+                return new JsonResponse(['error' => 'Token invalide ou utilisateur non autorisé'], 401);
+            }
+            
+            // Récupérer le planner actif
+            $planner = $user->getOnePlanner(($receivedData['sentIndex']));
+
+            //-----------------------------------------------//
+            // Traiter la marque pour le planner en question //
+            //-----------------------------------------------//
+            $planner->setMark($receivedData['sentDay']);
+
+            // mettre a jour le planner en question
+            $user->setActivePlanner($planner, ($receivedData['sentIndex']));
+
+            // Sauvegarder les changements
+            $entityManager->persist($user);
+            $entityManager->flush();
+
+            // Raffraichir $user et générer un nouveau token
+            $user = $this->entityManager->getRepository(User::class)->findOneByEmail($payload['email']);
+            $newToken = $this->jwtManager->create($user);
+
+
+            // Retourner le token JWT dans la réponse
+            return new JsonResponse(['message' => 'Recette ajoutée au planner', 'token' => $newToken]);
+
+        } catch (\Throwable $e) {
+            return new JsonResponse([
+                'error' => 'Erreur serveur : ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+    }
+
     public function getShopping(Request $request, EntityManagerInterface $entityManager) : JsonResponse
     {
         try {
