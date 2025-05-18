@@ -118,7 +118,7 @@ class ApiGatewayController extends AbstractController
                 break;
             case 'user-shopping-get': // Recuperer les ingrédients necessaires a un planner
                 if ($method === 'POST') {
-                    return $this->forward('App\Controller\API\User\Planner\UserApiPlannerController::getShopping', [
+                    return $this->forward('App\Controller\API\User\Planner\UserApiShoppingController::getShopping', [
                         'request' => $request,
                     ]);
                 }
