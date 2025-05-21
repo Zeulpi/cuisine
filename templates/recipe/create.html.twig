@@ -75,7 +75,7 @@
     
     <a href="{{ path('app_recipe') }}" data-turbo="false"> << back to list</a>
     
-    {{ form_start(form, {'action': action}) }}
+    {{ form_start(form, {'action': action, 'attr': {'data-turbo': 'false'}}) }}
         <div class="recipe-title">
             <div class="name-container" id="name-container">
                 {{ form_row(form.recipeName) }}

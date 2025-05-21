@@ -78,7 +78,7 @@ final class RecipeCreate extends AbstractController{
         // }
 
         if ($form->isSubmitted() && $form->isValid()) {
-            dump($request->request->all()); // Voir tous les champs envoyés
+            // dump($request->request->all()); // Voir tous les champs envoyés
             try {
                 $image = $form->get('image')->getData();
                 $steps = $recipe_raw->getRecipeSteps();
@@ -93,7 +93,7 @@ final class RecipeCreate extends AbstractController{
 
                 // dump($request->request->all('recipe'));
                 // dd('fini');
-                dump($selectedIngredients);
+                // dump($selectedIngredients);
 
                 //Gestion des ingrédients
                 if ($selectedIngredients) {
@@ -105,9 +105,9 @@ final class RecipeCreate extends AbstractController{
 
                         // Trouver l'ingrédient dans la base de données
                         $ingredient = $ingredientRepository->find($ingredientId);
-                        dump($ingredientId);
-                        dump($quantity);
-                        dump($unit);
+                        // dump($ingredientId);
+                        // dump($quantity);
+                        // dump($unit);
                         
                         if ($ingredient) {
                             // Ajouter l'ingrédient à la recette
@@ -127,7 +127,7 @@ final class RecipeCreate extends AbstractController{
                 foreach ($steps as $index => $step) {
                     $step->setStepNumber($index + 1); // L'ordre commence à 1
                     $step->setStepRecipe($recipe_raw);  // Lier la recette à chaque étape
-                    dump($step);
+                    // dump($step);
                 }
 
                 // Gestion de l'image (thumbnail de recette)
@@ -251,7 +251,7 @@ final class RecipeCreate extends AbstractController{
                 $entityManager->flush();
 
                 // Redirection après l'ajout
-                return $this->redirectToRoute('app_recipe');
+                return $this->redirectToRoute('app_recipe', [], 303);
             } catch (\Throwable $e) {
                 // Déterminer un message d'erreur générique selon l'erreur
                 $errorMessage = "Erreur de gestion des données."; // Par défaut

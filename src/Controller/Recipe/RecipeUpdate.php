@@ -25,9 +25,9 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 
-ini_set('max_execution_time', 0); // Désactive temporairement la limite de temps
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+// ini_set('max_execution_time', 0); // Désactive temporairement la limite de temps
+// ini_set('display_errors', 1);
+// error_reporting(E_ALL);
 
 final class RecipeUpdate extends AbstractController{
     private $doctrine;
@@ -125,8 +125,10 @@ final class RecipeUpdate extends AbstractController{
         // }
 
         if ($form->isSubmitted() && !$form->isValid()) {
-            dump($form->getErrors(true)); // Afficher les erreurs détaillées
-            dd("Formulaire invalide !");
+            // dump($form->getErrors(true)); // Afficher les erreurs détaillées
+            // dd("Formulaire invalide !");
+            $this->addFlash('success', 'Formulaire invalide !');
+            return $this->redirectToRoute('app_recipe', [], 303);
         }
         
         if ($form->isSubmitted() && $form->isValid()) {
@@ -199,16 +201,16 @@ final class RecipeUpdate extends AbstractController{
             $resultIngredientsJson = $request->request->get('result-ingredients', '[]');
             $resultIngredients = json_decode($resultIngredientsJson, true) ?? [];
             
-            dump("📌 Ingrédients intermédiaires chargés :", $resultIngredients);
-            dump('Steps soumis : ', $submittedSteps);
-            dump('Steps existants : ', $existingSteps);
+            // dump("📌 Ingrédients intermédiaires chargés :", $resultIngredients);
+            // dump('Steps soumis : ', $submittedSteps);
+            // dump('Steps existants : ', $existingSteps);
             $submittedStepsIndexed = [];
             foreach ($submittedSteps as $step) {
                 if (!empty($step['id'])) {
                     $submittedStepsIndexed[(int) $step['id']] = $step;
                 }
             }
-            dump('Steps soumis indexés : ', $submittedStepsIndexed);
+            // dump('Steps soumis indexés : ', $submittedStepsIndexed);
 
 
             // Gestion des ingredients et des quantités
@@ -277,10 +279,10 @@ final class RecipeUpdate extends AbstractController{
             //-----------------------//
             // Gestions des opérations
             //-----------------------//
-            dump("StepOperations soumis :", $allSelectedOperations);
+            // dump("StepOperations soumis :", $allSelectedOperations);
             foreach ($steps as $step) {
                 // dump($step);
-                dump("Step ID {$step->getId()} - StepOperations :", $step->getStepOperations());
+                // dump("Step ID {$step->getId()} - StepOperations :", $step->getStepOperations());
                 foreach ($step->getStepOperations() as $stepOp) {
                     $existingOperations[$stepOp->getId()] = $stepOp;
                 }
@@ -290,8 +292,8 @@ final class RecipeUpdate extends AbstractController{
             // Operations a mettre a jour
             $operationsToUpdate = [];
             $operationsToAdd = [];
-            dump("Opérations existantes :", $existingOperations);
-            dump("Opérations soumises :", $allSelectedOperations);
+            // dump("Opérations existantes :", $existingOperations);
+            // dump("Opérations soumises :", $allSelectedOperations);
             foreach ($allSelectedOperations as &$operationData) {
                 $step = null;
                 $newResult = null;
@@ -325,8 +327,8 @@ final class RecipeUpdate extends AbstractController{
                 } else if (!empty($operationData['id']) && isset($existingOperations[$operationData['id']])) {
                     $existingOp = $existingOperations[$operationData['id']];
 
-                    dump("🔹 Opération existante [ID {$existingOp->getId()}] :", $existingOp);
-                    dump("🔸 Opération soumise [ID {$operationData['id']}] :", $operationData);
+                    // dump("🔹 Opération existante [ID {$existingOp->getId()}] :", $existingOp);
+                    // dump("🔸 Opération soumise [ID {$operationData['id']}] :", $operationData);
 
                     // Comparer chaque champ pour détecter une modification
                     if (
@@ -340,15 +342,15 @@ final class RecipeUpdate extends AbstractController{
                 }
             }
 
-            dump("operations modifiées :", $allSelectedOperations);
+            // dump("operations modifiées :", $allSelectedOperations);
 
             // Operations a supprimer
             $submittedOperationIds = array_column($allSelectedOperations, 'id'); // Récupère uniquement les IDs soumis
             $operationsToRemove = array_diff(array_keys($existingOperations), $submittedOperationIds);
             
-            dump("Opérations à supprimer :", $operationsToRemove);
-            dump("Opérations à ajouter :", $operationsToAdd);
-            dump("📌 Opérations à mettre à jour :", $operationsToUpdate);
+            // dump("Opérations à supprimer :", $operationsToRemove);
+            // dump("Opérations à ajouter :", $operationsToAdd);
+            // dump("📌 Opérations à mettre à jour :", $operationsToUpdate);
 
 
             // Suppression des opérations
@@ -356,7 +358,7 @@ final class RecipeUpdate extends AbstractController{
                 $operationToRemove = $existingOperations[$operationId] ?? null;
                 if ($operationToRemove) {
                     $entityManager->remove($operationToRemove);
-                    dump("❌ Opération supprimée : ", $operationToRemove);
+                    // dump("❌ Opération supprimée : ", $operationToRemove);
                 }
             }
 
@@ -380,7 +382,7 @@ final class RecipeUpdate extends AbstractController{
                     $operationData['operationResult'] ? $operationToUpdate->setOperationResult($operationData['operationResult']) : null;
             
                     $entityManager->persist($operationToUpdate);
-                    dump("📝 Opération mise à jour : ", $operationToUpdate);
+                    // dump("📝 Opération mise à jour : ", $operationToUpdate);
                 }
             }
 
@@ -390,7 +392,7 @@ final class RecipeUpdate extends AbstractController{
                 // Trouver l’étape correspondante
                 $step = $recipe->getRecipeSteps()[$operationData['stepIndex']] ?? null;
                 if (!$step) {
-                    dump("⚠ Étape non trouvée pour l'opération :", $operationData);
+                    // dump("⚠ Étape non trouvée pour l'opération :", $operationData);
                     continue;
                 }
 
@@ -399,7 +401,7 @@ final class RecipeUpdate extends AbstractController{
                 $operation = reset($operation) ?: null;
 
                 if (!$operation) {
-                    dump("⚠ Opération non trouvée :", $operationData);
+                    // dump("⚠ Opération non trouvée :", $operationData);
                     continue;
                 }
 
@@ -423,17 +425,17 @@ final class RecipeUpdate extends AbstractController{
                 $step->addStepOperation($newStepOperation);
                 $entityManager->persist($newStepOperation);
 
-                dump("✅ Nouvelle opération ajoutée :", $newStepOperation);
+                // dump("✅ Nouvelle opération ajoutée :", $newStepOperation);
             }
 
             $entityManager->flush();
 
             // Redirection après l'ajout
 
-            dump("Recette mise à jour avec succès !");
+            // dump("Recette mise à jour avec succès !");
             // dd('fini');
             $this->addFlash('success', 'Recette mise à jour avec succès !');
-            return $this->redirectToRoute('app_recipe');
+            return $this->redirectToRoute('app_recipe', [], 303);
         }
 
         return $this->render('recipe/create.html.twig', [

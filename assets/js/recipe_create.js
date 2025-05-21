@@ -16,7 +16,7 @@ function initCreateForm() {
             
             // Utiliser les données récupérées
             const ingredients = recipeData.ingredients;
-            console.log(ingredients);
+            // console.log(ingredients);
             const ingredientsPerPage = recipeData.ingredientsPerPage;
             const operations = recipeData.operations;
             const imagePath = recipeData.imagePath;
