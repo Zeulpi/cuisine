@@ -17,50 +17,49 @@ class Recipe
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['recipe:list', 'recipe:detail'])]
+    #[Groups(['recipe:list', 'recipe:read', 'recipe:detail'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['recipe:list', 'recipe:detail'])]
+    #[Groups(['recipe:list', 'recipe:read', 'recipe:detail'])]
     private ?string $recipeName = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[Groups(['recipe:list', 'recipe:detail'])]
+    #[Groups(['recipe:list', 'recipe:read', 'recipe:detail'])]
     private ?string $recipeImg = null;
 
     /**
      * @var Collection<int, User>
      */
-    #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'UserNote', fetch: 'EAGER')]
+    #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'UserNote', fetch: 'LAZY')]
     private Collection $recipeNote;
 
     /**
      * @var Collection<int, Ingredient>
      */
     #[ORM\ManyToMany(targetEntity: Ingredient::class, inversedBy: 'ingredientRecipe')]
-    #[Ignore]
-    #[Groups(['recipe:detail'])]
+    #[Groups(['recipe:detail', 'recipe:read'])]
     private Collection $recipeIngredient;
 
     /**
      * @var Collection<int, Step>
      */
-    #[ORM\OneToMany(targetEntity: Step::class, mappedBy: 'stepRecipe', orphanRemoval: true, cascade: ['persist', 'remove'], fetch: 'EAGER')]
+    #[ORM\OneToMany(targetEntity: Step::class, mappedBy: 'stepRecipe', orphanRemoval: true, cascade: ['persist', 'remove'], fetch: 'LAZY')]
     #[Groups(['recipe:detail'])]
     private Collection $recipeSteps;
 
     #[ORM\Column(type: Types::SMALLINT)]
-    #[Groups(['recipe:detail'])]
+    #[Groups(['recipe:detail', 'recipe:read'])]
     private ?int $recipePortions = null;
 
     #[ORM\Column(type: Types::JSON, nullable: true)]
-    #[Groups(['recipe:detail'])]
+    #[Groups(['recipe:detail', 'recipe:read'])]
     private $recipeQuantities = [];
 
     /**
      * @var Collection<int, Tag>
      */
-    #[ORM\ManyToMany(targetEntity: Tag::class, inversedBy: 'tagRecipe', fetch: 'EAGER')]
+    #[ORM\ManyToMany(targetEntity: Tag::class, inversedBy: 'tagRecipe', fetch: 'LAZY')]
     #[Groups(['recipe:list', 'recipe:detail'])]
     private Collection $recipeTags;
 

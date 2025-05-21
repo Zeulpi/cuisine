@@ -57,6 +57,9 @@ final class RecipeUpdate extends AbstractController{
         if (!$recipe) {
             throw $this->createNotFoundException("Recette non trouvée !");
         }
+        $recipeData = json_decode($serializer->serialize($recipe, 'json', [
+            'groups' => ['recipe:read']
+        ]), true);
         // $recipe->getRecipeSteps();
         // $entityManager->refresh($recipe);
 
@@ -109,12 +112,12 @@ final class RecipeUpdate extends AbstractController{
             }, $step->getStepOperations()->toArray());
         }
         // dd($stepOperationArray);
-        dump("Avant handleRequest :", $recipe);
+        // dump("Avant handleRequest :", $recipe);
         $form = $this->createForm(RecipeType::class, $recipe);
         $form->handleRequest($request);
-        dump("Toute la requete :", $request->request->all());
-        dump("Étapes reçues par Symfony :", $request->request->all('recipe')['recipeSteps'] ?? []);
-        dump("Apres handleRequest :", $recipe);
+        // dump("Toute la requete :", $request->request->all());
+        // dump("Étapes reçues par Symfony :", $request->request->all('recipe')['recipeSteps'] ?? []);
+        // dump("Apres handleRequest :", $recipe);
 
         // if ($form->isSubmitted()) {
         //     dump($form->getExtraData()); // Voir les champs non reconnus par Symfony
@@ -435,7 +438,7 @@ final class RecipeUpdate extends AbstractController{
 
         return $this->render('recipe/create.html.twig', [
             'form' => $form->createView(),
-            'recipe' => $recipe,
+            'recipe' => $recipeData,
             'ingredients' => json_decode($serializer->serialize($ingredients, 'json', ['groups' => 'ingredient:read']), true),
             'ingredientsPerPage' => $ingredientsPerPage,
             'operations' => json_decode($serializer->serialize($operations, 'json', ['groups' => 'operations:read']), true),

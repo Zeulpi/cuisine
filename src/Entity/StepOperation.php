@@ -19,7 +19,7 @@ class StepOperation
     #[ORM\JoinColumn(nullable: false)]
     private ?Step $step = null;
 
-    #[ORM\ManyToOne(targetEntity: Operation::class, inversedBy: 'stepOperations', fetch: 'EAGER')]
+    #[ORM\ManyToOne(targetEntity: Operation::class, inversedBy: 'stepOperations', fetch: 'LAZY')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Operation $operation = null;
 

@@ -15,11 +15,11 @@ class Ingredient
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['ingredient:read'])]
+    #[Groups(['ingredient:read', 'recipe:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['ingredient:read'])]
+    #[Groups(['ingredient:read','recipe:read'])]
     private ?string $ingredientName = null;
 
     #[ORM\Column(type: 'json')]
@@ -27,25 +27,28 @@ class Ingredient
     private array $ingredientUnit = [];
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[Groups(['ingredient:read'])]
+    #[Groups(['ingredient:read', 'recipe:read'])]
     private ?string $ingredientImg = null;
 
     /**
      * @var Collection<int, Recipe>
      */
-    #[ORM\ManyToMany(targetEntity: Recipe::class, mappedBy: 'recipeIngredient')]
+    #[ORM\ManyToMany(targetEntity: Recipe::class, mappedBy: 'recipeIngredient', fetch: 'LAZY')]
+    #[Ignore]
     private Collection $ingredientRecipe;
 
     /**
      * @var Collection<int, StepOperation>
      */
-    #[ORM\OneToMany(targetEntity: StepOperation::class, mappedBy: 'ingredient', orphanRemoval: true, cascade: ['persist', 'remove'], fetch: 'EAGER')]
+    #[ORM\OneToMany(targetEntity: StepOperation::class, mappedBy: 'ingredient', orphanRemoval: true, cascade: ['persist', 'remove'], fetch: 'LAZY')]
+    #[Ignore]
     private Collection $stepOperations;
 
     /**
      * @var Collection<int, Fridge>
      */
-    #[ORM\ManyToMany(targetEntity: Fridge::class, mappedBy: 'ingredients')]
+    #[ORM\ManyToMany(targetEntity: Fridge::class, mappedBy: 'ingredients', fetch: 'LAZY')]
+    #[Ignore]
     private Collection $fridges;
 
 

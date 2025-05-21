@@ -45,7 +45,7 @@ class Step
     /**
      * @var Collection<int, StepOperation>
      */
-    #[ORM\OneToMany(targetEntity: StepOperation::class, mappedBy: 'step', orphanRemoval: true, cascade: ['remove'], fetch: 'EAGER')]
+    #[ORM\OneToMany(targetEntity: StepOperation::class, mappedBy: 'step', orphanRemoval: true, cascade: ['remove'], fetch: 'LAZY')]
     private Collection $stepOperations;
 
     public function __construct()
