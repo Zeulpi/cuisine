@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\User;
+use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\{IdField, EmailField, TextField, ArrayField, AssociationField, BooleanField, TextEditorField, ChoiceField, ImageField, DateField};
 use Symfony\Component\Form\Extension\Core\Type\{PasswordType, RepeatedType};
@@ -29,6 +30,29 @@ class UserCrudController extends AbstractCrudController
             ;
     }
     
+    public function deleteEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        if (!$entityInstance instanceof User) {
+            return;
+        }
+
+        $fridge = $entityInstance->getFridge();
+        if ($fridge) {
+            // On détache tous les ingrédients avant suppression
+            foreach ($fridge->getIngredients() as $ingredient) {
+                $fridge->removeIngredient($ingredient);
+            }
+
+            // Maintenant on peut supprimer le fridge
+            $entityManager->remove($fridge);
+        }
+
+        // Et enfin le user
+        $entityManager->remove($entityInstance);
+        $entityManager->flush();
+    }
+
+
     public function configureFields(string $pageName): iterable
     {
         $roles = ['ROLE_ADMIN', 'ROLE_CREATOR', 'ROLE_USER'];
