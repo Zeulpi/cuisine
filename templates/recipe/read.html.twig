@@ -92,26 +92,7 @@
             </div>
         </div>
         <div class="recipe-container">
-            {# {% for recipe in recipesList %}
-            <div class="recipe-frame">
-                <div class="recipe-name">
-                    {{ recipe.name }}
-                </div>
-                <div class="recipe-image">
-                    {% if recipe.img %}
-                        <img src="{{ asset('images/recipes/' ~ recipe.img) }}" alt="Image" style="width:100px">
-                    {% else %}
-                        <img src="" alt="Image" style="width:100px">
-                    {% endif %}
-                </div>
-                <div class="recipe-btns">
-                    <a href="{{ path('recipe_update', { id: recipe.id }) }}" class="btn btn-success" data-turbo="false">Edit</a>
-                    <a href="{{ path('recipe_delete', { id: recipe.id }) }}" class="btn btn-danger delete-button"  data-recipe-name="{{ recipe.name }}" data-csrf-token="{{ csrf_token('delete_recipe') }}">
-                        X
-                    </a>
-                </div>
-            </div>
-            {% endfor %} #}
+            {# Géré par JavaScript #}
         </div>
         <div class="actions-frame">
             <div class="action-pages">

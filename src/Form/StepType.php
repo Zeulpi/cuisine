@@ -18,12 +18,12 @@ class StepType extends AbstractType
             ->add('id', HiddenType::class, [
                         'mapped' => false, // Ne doit pas être modifié par le formulaire
                         'attr' => [
-                            'data-int' => true, // ✅ Indice pour conversion JS si nécessaire
+                            'data-int' => true, // Indice pour conversion JS si nécessaire
                         ]
                     ])
             ->add('stepNumber', HiddenType::class, [
                         'attr' => [
-                            'data-int' => true, // ✅ Indice pour conversion JS si nécessaire
+                            'data-int' => true, // Indice pour conversion JS si nécessaire
                         ]
                     ])
             ->add('stepText', HiddenType::class, [

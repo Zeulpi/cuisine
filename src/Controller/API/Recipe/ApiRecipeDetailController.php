@@ -3,16 +3,8 @@
 namespace App\Controller\API\Recipe;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
-use App\Entity\Recipe;
 use App\Repository\RecipeRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
-use Knp\Component\Pager\PaginatorInterface;
-use App\Entity\Tag;
-use App\Repository\TagRepository;
-use Doctrine\ORM\EntityManager;
 
 final class ApiRecipeDetailController extends AbstractController{
     // #[Route('/api/recipes/{id}', name: 'api_recipe_detail', methods: ['GET'])]
@@ -39,7 +31,7 @@ final class ApiRecipeDetailController extends AbstractController{
         // recupérer les quantités des ingrédients
         $recipeQuantities = $recipe->getRecipeQuantities(); // Récupérer le JSON
         if (!is_array($recipeQuantities)) {
-            $recipeQuantities = json_decode($recipeQuantities, true) ?? []; // Décoder si nécessaire
+            $recipeQuantities = json_decode($recipeQuantities, true) ?? [];
         }
 
         $ingredients = [];

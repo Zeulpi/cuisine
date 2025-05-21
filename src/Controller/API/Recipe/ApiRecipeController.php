@@ -49,11 +49,11 @@ final class ApiRecipeController extends AbstractController{
             
             
         $applyGroupBy = false;
-        // 🔐 Validation des paramètres
+        // Validation des paramètres
         if (!is_array($tagList) || array_filter($tagList, fn($tag) => !is_string($tag))) {
             return new JsonResponse(['error' => 'Paramètres de tags invalides.'], 400);
         }
-        // 🏷️ Filtrage par tags
+        // Filtrage par tags
         if (!empty($tagList)) {
             $sub = $recipeRepository->createQueryBuilder('r2')
                 ->select('r2.id')
@@ -61,7 +61,7 @@ final class ApiRecipeController extends AbstractController{
                 ->where('t2.tagName IN (:tags)')
                 ->groupBy('r2.id')
                 ->having('COUNT(DISTINCT t2.id) = :nbTags')
-                ->getDQL(); // ✅ on récupère la DQL pour la sous-requête
+                ->getDQL(); // on récupère la DQL pour la sous-requête
         
             $queryBuilder
                 ->andWhere($queryBuilder->expr()->in('r.id', $sub))
@@ -151,7 +151,7 @@ final class ApiRecipeController extends AbstractController{
                 'totalPages' => ceil($pagination->getTotalItemCount() / $limit),
                 'totalItems' => $pagination->getTotalItemCount(),
             ],
-            'debug_tagList' => $tagList, // tu peux retirer ça ensuite
+            'debug_tagList' => $tagList,
         ]);
     }
 

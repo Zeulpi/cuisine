@@ -3,25 +3,19 @@
 namespace App\Controller\Recipe;
 
 use App\Entity\Recipe;
-use App\Entity\Step;
-use App\Repository\RecipeRepository;
 use App\Repository\IngredientRepository;
 use App\Repository\OperationRepository;
 use App\Entity\StepOperation;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use App\Form\RecipeType;
-use Doctrine\ORM\EntityManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\Persistence\ManagerRegistry as PersistenceManagerRegistry;
-use Dom\Entity;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 
@@ -142,7 +136,7 @@ final class RecipeUpdate extends AbstractController{
             $filesystem = new Filesystem();
             $oldImage = $recipe->getRecipeImg(); // Conserver l'ancienne image
 
-            // 🔹 **Cas 1 & 2 : Suppression de l'image actuelle**
+            // **Cas 1 & 2 : Suppression de l'image actuelle**
             if ($removeImage == "1" && $oldImage) {
                 $imagePath = $this->getParameter('kernel.project_dir') . '/public/images/recipes/' . $oldImage;
                 
@@ -154,7 +148,7 @@ final class RecipeUpdate extends AbstractController{
                 $recipe->setRecipeImg(null); // Supprimer l’image en base
             }
 
-            // 🔹 **Cas 2 & 3 : Ajout / Remplacement de l'image**
+            // **Cas 2 & 3 : Ajout / Remplacement de l'image**
             if ($image) {
                 $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
                 $maxFileSize = 5 * 1024 * 1024; // 5 Mo
@@ -179,7 +173,7 @@ final class RecipeUpdate extends AbstractController{
                 }
             }
 
-            // 🔹 **Cas 4 : Rien ne change, aucune modification nécessaire**
+            // **Cas 4 : Rien ne change, aucune modification nécessaire**
 
             
             // foreach ($existingSteps as $step) {
@@ -201,7 +195,7 @@ final class RecipeUpdate extends AbstractController{
             $resultIngredientsJson = $request->request->get('result-ingredients', '[]');
             $resultIngredients = json_decode($resultIngredientsJson, true) ?? [];
             
-            // dump("📌 Ingrédients intermédiaires chargés :", $resultIngredients);
+            // dump("Ingrédients intermédiaires chargés :", $resultIngredients);
             // dump('Steps soumis : ', $submittedSteps);
             // dump('Steps existants : ', $existingSteps);
             $submittedStepsIndexed = [];
@@ -320,15 +314,15 @@ final class RecipeUpdate extends AbstractController{
                 }
                 $operationData['operationResult'] = $newResult;
 
-                // 🔸 Vérifier si l'opération existe déjà en base
+                // Vérifier si l'opération existe déjà en base
                 if(empty($operationData['id'])) {
-                    // 🔹 Nouvelle opération
+                    // Nouvelle opération
                     $operationsToAdd[] = $operationData;
                 } else if (!empty($operationData['id']) && isset($existingOperations[$operationData['id']])) {
                     $existingOp = $existingOperations[$operationData['id']];
 
-                    // dump("🔹 Opération existante [ID {$existingOp->getId()}] :", $existingOp);
-                    // dump("🔸 Opération soumise [ID {$operationData['id']}] :", $operationData);
+                    // dump(" Opération existante [ID {$existingOp->getId()}] :", $existingOp);
+                    // dump(" Opération soumise [ID {$operationData['id']}] :", $operationData);
 
                     // Comparer chaque champ pour détecter une modification
                     if (
@@ -350,7 +344,7 @@ final class RecipeUpdate extends AbstractController{
             
             // dump("Opérations à supprimer :", $operationsToRemove);
             // dump("Opérations à ajouter :", $operationsToAdd);
-            // dump("📌 Opérations à mettre à jour :", $operationsToUpdate);
+            // dump("Opérations à mettre à jour :", $operationsToUpdate);
 
 
             // Suppression des opérations
@@ -371,11 +365,11 @@ final class RecipeUpdate extends AbstractController{
                     $operationToUpdate->setOperation(reset($operation) ?: null);
                      // Gestion de l'ingrédient
                     if ($operationData['ingredientId'] > 0) {
-                        // 🔹 Ingrédient existant : le chercher dans les ingrédients préchargés
+                        // Ingrédient existant : le chercher dans les ingrédients préchargés
                         $ingredient = array_filter($ingredients, fn($ing) => $ing->getId() === (int) $operationData['ingredientId']);
                         $operationToUpdate->setIngredient(reset($ingredient) ?: null);
                     } else {
-                        // 🔹 Ingrédient intermédiaire : toujours `null`
+                        // Ingrédient intermédiaire : toujours `null`
                         $operationToUpdate->setIngredient(null);
                     }
                     // Gestion du résultat d'opération
@@ -387,7 +381,7 @@ final class RecipeUpdate extends AbstractController{
             }
 
 
-            // 🔹 AJOUTER LES NOUVELLES OPÉRATIONS
+            // AJOUTER LES NOUVELLES OPÉRATIONS
             foreach ($operationsToAdd as $operationData) {
                 // Trouver l’étape correspondante
                 $step = $recipe->getRecipeSteps()[$operationData['stepIndex']] ?? null;
@@ -414,18 +408,18 @@ final class RecipeUpdate extends AbstractController{
                 // Gérer l'opérationResult (ingrédient transformé)
                 $operationResult = $operationData['operationResult'] ?? null;
 
-                // 🔸 Création de la nouvelle StepOperation
+                //  Création de la nouvelle StepOperation
                 $newStepOperation = new StepOperation();
                 $newStepOperation->setStep($step);
                 $newStepOperation->setOperation($operation);
                 $newStepOperation->setIngredient($ingredient);
                 $operationResult ? $newStepOperation->setOperationResult($operationResult) : null;
 
-                // 🔸 Associer à l’étape
+                //  Associer à l’étape
                 $step->addStepOperation($newStepOperation);
                 $entityManager->persist($newStepOperation);
 
-                // dump("✅ Nouvelle opération ajoutée :", $newStepOperation);
+                // dump(" Nouvelle opération ajoutée :", $newStepOperation);
             }
 
             $entityManager->flush();

@@ -2,20 +2,16 @@
 
 namespace App\Controller\API\User\Planner;
 
-use App\Entity\User;
-use App\Model\Planner;
 use App\Entity\Recipe;
 use App\Entity\Ingredient;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use Symfony\Component\Serializer\SerializerInterface;
-use App\Model\PlannerRecipes;
 
 class UserApiShoppingController extends AbstractController
 {

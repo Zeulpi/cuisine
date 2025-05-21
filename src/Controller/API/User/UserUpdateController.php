@@ -104,7 +104,7 @@ class UserUpdateController extends AbstractController
                     $uploadedFile->move($uploadDir, $filename);
                     $user->setUserImg($filename);
 
-                    // 🧼 Suppression de l'ancien avatar (s'il y en a un)
+                    // Suppression de l'ancien avatar (s'il y en a un)
                     if (!empty($previousImage)) {
                         $oldFile = $uploadDir . '/' . $previousImage;
                         if (file_exists($oldFile)) {

@@ -3,10 +3,7 @@
 namespace App\Controller\Recipe;
 
 use App\Entity\Recipe;
-use App\Repository\RecipeRepository;
 use App\Repository\StepOperationRepository;
-use App\Form\RecipeType;
-use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,9 +12,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\Persistence\ManagerRegistry as PersistenceManagerRegistry;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\HttpFoundation\File\Exception\FileException;
 
 
 final class RecipeDelete extends AbstractController{
@@ -54,7 +49,7 @@ final class RecipeDelete extends AbstractController{
                 
                 if ($filesystem->exists($imagePath)) {
                     $filesystem->remove($imagePath);
-                    $this->addFlash('success', "L'image a été supprimée.");
+                    // $this->addFlash('success', "L'image a été supprimée.");
                 }
             }
 
@@ -64,7 +59,7 @@ final class RecipeDelete extends AbstractController{
             //Trouver les opérations de chaque étape et les supprimer
             foreach ($steps as $recipeStep) {
                 $stepId = $recipeStep->getId();
-                dump($stepId);
+                // dump($stepId);
                 // lister les stepOperations par étapoe
                 $stepOperations = $stepOpRepo->findByStepId($stepId);
                 foreach ($stepOperations as $stepOperation){
@@ -90,7 +85,7 @@ final class RecipeDelete extends AbstractController{
         // Message flash de suppression
         $this->addFlash('success', 'Recette supprimée avec succès.');
 
-        return $this->redirectToRoute('app_recipe');
+        return $this->redirectToRoute('app_recipe', [], 303);
     }
     
 }

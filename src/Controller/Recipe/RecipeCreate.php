@@ -3,14 +3,9 @@
 namespace App\Controller\Recipe;
 
 use App\Entity\Recipe;
-use App\Entity\Step;
 use App\Entity\StepOperation;
-use App\Entity\Operation;
-use App\Repository\RecipeRepository;
 use App\Repository\IngredientRepository;
 use App\Repository\OperationRepository;
-use App\Repository\StepRepository;
-use App\Repository\StepOperationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Form\RecipeType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -18,12 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\Persistence\ManagerRegistry as PersistenceManagerRegistry;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Doctrine\ORM\Tools\Pagination\Paginator;
-use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\SerializerInterface;
 
 
@@ -153,7 +143,7 @@ final class RecipeCreate extends AbstractController{
                                 $this->getParameter('kernel.project_dir') . '/public/images/recipes', // Dossier de destination sécurisé
                                 $newFilename
                             );
-                            $recipe_raw->setRecipeImg($newFilename); // ✅ Enregistrer le nom de l'image en base
+                            $recipe_raw->setRecipeImg($newFilename); // Enregistrer le nom de l'image en base
                         } catch (FileException $e) {
                             $this->addFlash('error', "Une erreur est survenue lors de l'upload de l'image.");
                         }
@@ -272,7 +262,6 @@ final class RecipeCreate extends AbstractController{
             'ingredients' => json_decode($serializer->serialize($ingredients, 'json', ['groups' => 'ingredient:read']), true),
             'ingredientsPerPage' => $ingredientsPerPage,
             'operations' => json_decode($serializer->serialize($operations, 'json', ['groups' => 'operations:read']), true),
-            'steps' => $recipe_raw->getRecipeSteps(),
         ]);
     }
     
