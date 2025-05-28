@@ -107,8 +107,8 @@ class UserCreateController extends AbstractController
                 ]);
             }
 
-            $this->entityManager->persist($user);
-            $this->entityManager->flush();
+            // $this->entityManager->persist($user);
+            // $this->entityManager->flush();
 
 
             // Création d'un fridge pour le nouvel utilisateur
@@ -117,8 +117,8 @@ class UserCreateController extends AbstractController
             $user->setFridge($userFridge);
 
             // Persist et flush pour sauvegarder le fridge en bdd
-            $this->entityManager->persist($user);
             $this->entityManager->persist($userFridge);
+            $this->entityManager->persist($user);
             $this->entityManager->flush();
 
             // Crée un nouveau token pour mettre a jour le front

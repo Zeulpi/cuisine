@@ -26,6 +26,9 @@ final class ApiRecipeController extends AbstractController{
         $searchTerm = $request->query->get('search') ?? '';
         $tagFilter = $request->query->get('tags') ?? '';
         $tagList = $tagFilter ? explode(',', $tagFilter) : [];
+        $ingFilter = $request->query->get('ingredients') ?? '{}';
+        $decodedIngredients = json_decode($ingFilter, true);
+
 
         $queryBuilder = $recipeRepository->createQueryBuilder('r')
             ->leftJoin('r.recipeTags', 't')      // pour récupérer les tags à afficher
@@ -47,15 +50,15 @@ final class ApiRecipeController extends AbstractController{
                 break;
         }
             
-            
+         
+        // 🔍 Filtrage par tags
         $applyGroupBy = false;
         // Validation des paramètres
         if (!is_array($tagList) || array_filter($tagList, fn($tag) => !is_string($tag))) {
             return new JsonResponse(['error' => 'Paramètres de tags invalides.'], 400);
         }
-        // Filtrage par tags
         if (!empty($tagList)) {
-            $sub = $recipeRepository->createQueryBuilder('r2')
+            $subTags = $recipeRepository->createQueryBuilder('r2')
                 ->select('r2.id')
                 ->join('r2.recipeTags', 't2')
                 ->where('t2.tagName IN (:tags)')
@@ -64,7 +67,7 @@ final class ApiRecipeController extends AbstractController{
                 ->getDQL(); // on récupère la DQL pour la sous-requête
         
             $queryBuilder
-                ->andWhere($queryBuilder->expr()->in('r.id', $sub))
+                ->andWhere($queryBuilder->expr()->in('r.id', $subTags))
                 ->setParameter('tags', $tagList)
                 ->setParameter('nbTags', count($tagList));
         }
@@ -82,6 +85,29 @@ final class ApiRecipeController extends AbstractController{
             if (!$applyGroupBy && !empty($tagList)) {
                 $queryBuilder->groupBy('r.id');
             }
+        }
+
+
+        // 🔍 Filtrage par ingrédients
+        if (!empty($decodedIngredients)) {
+            $userIngredientIds = array_map('intval', array_keys($decodedIngredients));
+
+            $subIngs = $recipeRepository->createQueryBuilder('recipeIngFilter')
+                ->select('recipeIngFilter.id')
+                ->join('recipeIngFilter.recipeIngredient', 'requiredIng')
+                ->where('requiredIng.id IN (:userIngredientIds)')
+                ->groupBy('recipeIngFilter.id')
+                ->having('COUNT(DISTINCT requiredIng.id) = (
+                    SELECT COUNT(DISTINCT totalIng.id)
+                    FROM App\Entity\Recipe recipeTotal
+                    JOIN recipeTotal.recipeIngredient totalIng
+                    WHERE recipeTotal.id = recipeIngFilter.id
+                )')
+                ->getDQL();
+        
+            $queryBuilder
+                ->andWhere($queryBuilder->expr()->in('r.id', $subIngs))
+                ->setParameter('userIngredientIds', $userIngredientIds);
         }
 
         try {
