@@ -1098,7 +1098,8 @@ function initCreateForm() {
             });
             
             // Fonction de surveillance des keypress et des copier/coller pour les champs de texte
-            function setupTextValidation(containerSelector, targetClass, allowedRegex = /^[a-z0-9.,;:!?()"'%+\-]$/i) {
+            function setupTextValidation(containerSelector, targetClass, allowedRegex = /^[\p{L}0-9,().:'’\s\-+]+$/u
+) {
                 const container = document.querySelector(containerSelector);
             
                 if (!container) {
@@ -1130,10 +1131,10 @@ function initCreateForm() {
             }
             
             
-            setupTextValidation("#steps", "step-description");
-            setupTextValidation("#operation-popup", "result-description");
-            setupTextValidation("#ingredients-container", "ingredient-unit", /^[a-z0-9.,;:()+\-]$/i);
-            setupTextValidation("#name-container", "recipe-name-input", /^[a-z0-9.,;:()+\-]$/i);
+            setupTextValidation("#steps", "step-description", /^[\p{L}0-9,().:'’\s\-+]+$/u);
+            setupTextValidation("#operation-popup", "result-description", /^[\p{L}0-9,() .:'’\-+]+$/u);
+            // setupTextValidation("#ingredients-container", "ingredient-unit");
+            setupTextValidation("#name-container", "recipe-name-input", /^[\p{L}0-9,() .:'’\-+]+$/u);
 
 
             // Synchroniser les contenus au moment de la soumission
